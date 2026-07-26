@@ -67,10 +67,10 @@ const TYPE_CFG: Record<NotifType, { icon: React.ElementType; color: string; bg: 
    Only `opacity` + `transform: translate3d(...)` are ever animated — plain
    CSS transitions, compositor-only, no framer-motion / layout animation. */
 
-const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";
-const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
-const OPEN_MS    = 230;
-const CLOSE_MS   = 210;
+const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";   /* spring-like: fast settle, tiny overshoot */
+const EASE_CLOSE = "cubic-bezier(0.4,0,0.55,1)";   /* smooth deceleration out */
+const OPEN_MS    = 320;
+const CLOSE_MS   = 240;
 
 /* ─── memoised sub-components ─────────────────────────────────────────────── */
 
@@ -242,7 +242,9 @@ export const NotificationPanel = memo(function NotificationPanel({ open, onClose
       />
 
       {/* Fullscreen sheet — GPU-composited transform + opacity only.
-          No inset padding beyond top/bottom safe-area; no top margin/offset. */}
+          Open:  slides down from -28 px + fades in + gentle scale-up from 0.97.
+          Close: slides up to -20 px + fades out + scale-down to 0.98.
+          Only `opacity` + `transform` are animated — compositor-thread only. */}
       <div
         role="dialog"
         aria-modal="true"
@@ -253,17 +255,21 @@ export const NotificationPanel = memo(function NotificationPanel({ open, onClose
           top: 0, left: 0, right: 0, bottom: 0,
           height: "100%",
           display: "flex", flexDirection: "column",
-          background: "#000000",
-          transformOrigin,
-          transform: open ? "scale(1)" : "scale(0.04)",
+          background: "#0a0a0a",
+          transform: open
+            ? "translate3d(0,0,0) scale(1)"
+            : "translate3d(0,-28px,0) scale(0.97)",
           opacity: open ? 1 : 0,
-          transition: [
-            `transform ${open ? OPEN_MS : CLOSE_MS}ms ${open ? EASE_OPEN : EASE_CLOSE}`,
-            `opacity ${open ? Math.round(OPEN_MS * 0.55) : CLOSE_MS}ms ${open ? EASE_OPEN : EASE_CLOSE}`,
-          ].join(", "),
+          transition: open
+            ? [
+                `transform ${OPEN_MS}ms ${EASE_OPEN}`,
+                `opacity ${Math.round(OPEN_MS * 0.60)}ms ${EASE_OPEN}`,
+              ].join(", ")
+            : [
+                `transform ${CLOSE_MS}ms ${EASE_CLOSE}`,
+                `opacity ${Math.round(CLOSE_MS * 0.80)}ms ${EASE_CLOSE}`,
+              ].join(", "),
           willChange: "transform, opacity",
-          /* Top inset consumed once by native spacer in index.tsx — no CSS env() needed.
-             Bottom inset not consumed natively, so kept here. */
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
         className="transform-gpu"
