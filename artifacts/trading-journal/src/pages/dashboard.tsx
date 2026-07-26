@@ -465,7 +465,7 @@ const CalendarHeatmap = memo(function CalendarHeatmap({
     days.push(
       <div
         key={dateStr}
-        onClick={() => onDateClick(dateStr)}
+        onClick={() => entry && entry.trades > 0 && onDateClick(dateStr)}
         className={`relative rounded-lg aspect-square flex flex-col items-center justify-center border border-transparent transition-opacity active:opacity-60 ${
           entry && entry.trades > 0 ? "cursor-pointer" : "cursor-default"
         }`}
@@ -609,15 +609,9 @@ const Dashboard = memo(function Dashboard() {
   }, [setDashboardSheetOpen]);
 
   const handleDateClick = useCallback((date: string) => {
-    const calMap = (calData ?? []).reduce<Record<string, { pnl: number; trades: number }>>((m, d) => {
-      m[d.date] = { pnl: d.pnl, trades: d.trades };
-      return m;
-    }, {});
-    const entry = calMap[date];
-    if (!entry || entry.trades === 0) return; // only open for days with trades
     setSelectedDate(date);
     openSheet(true);
-  }, [calData, openSheet]);
+  }, [openSheet]);
 
   const selectedDayData = useMemo(() => {
     if (!selectedDate || !calData) return null;
