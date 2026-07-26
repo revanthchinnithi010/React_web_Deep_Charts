@@ -594,7 +594,7 @@ export const ProfilePage = memo(function ProfilePage({
               </div>
 
               {/* ── Export Data ─────────────────────────────────────────────────── */}
-              <Card noPad>
+              <div className="dash-account-card" style={{ padding: 0, overflow: "hidden" }}>
                 <button
                   onClick={handleExportProfile}
                   style={{
@@ -613,19 +613,19 @@ export const ProfilePage = memo(function ProfilePage({
                     <Download style={{ width: 17, height: 17, color: "#60a5fa" }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", lineHeight: 1.3 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "var(--stat-value)", lineHeight: 1.3 }}>
                       Export Data
                     </p>
-                    <p style={{ fontSize: 11, color: "rgba(148,163,184,0.55)", marginTop: 2 }}>
+                    <p style={{ fontSize: 11, color: "var(--stat-sub)", marginTop: 2 }}>
                       Download your profile as JSON
                     </p>
                   </div>
                   <ChevronRight style={{ width: 16, height: 16, color: "rgba(148,163,184,0.30)", flexShrink: 0 }} />
                 </button>
-              </Card>
+              </div>
 
               {/* ── Sign Out ────────────────────────────────────────────────────── */}
-              <Card noPad style={{ marginBottom: 8 }}>
+              <div className="dash-account-card" style={{ padding: 0, overflow: "hidden", marginBottom: 8 }}>
                 <button
                   onClick={handleClose}
                   style={{
@@ -647,7 +647,7 @@ export const ProfilePage = memo(function ProfilePage({
                     Sign Out
                   </span>
                 </button>
-              </Card>
+              </div>
 
             </div>
           </div>
