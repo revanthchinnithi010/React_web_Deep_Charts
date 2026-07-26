@@ -194,10 +194,18 @@ export const ProfilePage = memo(function ProfilePage({
       /* Push the root history entry for this session. */
       window.history.pushState({ tjProfileNav: true, depth: 0 }, "");
 
-      /* Double-RAF triggers the CSS enter transition. */
-      const rafId = requestAnimationFrame(() =>
-        requestAnimationFrame(() => setVisible(true))
-      );
+      /* Trigger the CSS enter transition reliably on mobile.
+         Double-RAF alone is unreliable: both callbacks can fire before the
+         browser paints, so the element never spends a frame at
+         translateX(-100%) and the slide-in is skipped intermittently.
+         setTimeout(0) pushes into a new task (after React's DOM commit +
+         any pending microtasks), then a single RAF syncs to the next paint
+         cycle — guaranteeing the browser has painted the closed position
+         before we flip to the open position and start the transition. */
+      let rafId: number;
+      const timerId = setTimeout(() => {
+        rafId = requestAnimationFrame(() => setVisible(true));
+      }, 0);
 
       /* Single popstate handler for the ENTIRE profile navigation session.
          All sub-pages are controlled by this handler — none register their own. */
@@ -224,6 +232,7 @@ export const ProfilePage = memo(function ProfilePage({
       window.addEventListener("popstate", h);
 
       return () => {
+        clearTimeout(timerId);
         cancelAnimationFrame(rafId);
         window.removeEventListener("popstate", h);
       };
