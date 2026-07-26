@@ -1,4 +1,5 @@
 import { memo, useMemo, useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   useListTrades,
   useGetCalendarHeatmap,
@@ -17,11 +18,6 @@ import { useChartStore } from "@/store/chartStore";
 import {
   PageTransition,
 } from "@/components/animations";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerClose,
-} from "@/components/ui/drawer";
 
 const DASHBOARD_TIMEOUT_MS = 2_000;
 
@@ -38,11 +34,15 @@ const tooltipStyle = {
 
 // ── Calendar Heatmap ──────────────────────────────────────────────────────────
 // ── Day Detail Sheet ──────────────────────────────────────────────────────────
+const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";
+const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
+const DUR_OPEN   = 320;
+const DUR_CLOSE  = 240;
+
 const DayDetailSheet = memo(function DayDetailSheet({
-  date, dayData, open, onClose,
+  date, open, onClose,
 }: {
   date: string;
-  dayData: { pnl: number; trades: number } | null;
   open: boolean;
   onClose: () => void;
 }) {
@@ -51,11 +51,7 @@ const DayDetailSheet = memo(function DayDetailSheet({
     { date, limit: 100 },
     { query: { enabled: open && !!date } },
   );
-
-  // The API filters by date server-side (both real and mock), so every trade
-  // in the response already belongs to this calendar day. No client re-filter needed.
   const dayTrades = data?.trades ?? [];
-
   const wins      = dayTrades.filter(t => (t.pnl ?? 0) > 0).length;
   const losses    = dayTrades.filter(t => (t.pnl ?? 0) < 0).length;
   const dailyPnl  = dayTrades.reduce((sum, t) => sum + (t.pnl ?? 0), 0);
@@ -65,8 +61,42 @@ const DayDetailSheet = memo(function DayDetailSheet({
     ? (dayTrades.find(t => t.id === selectedTradeId) ?? null)
     : null;
 
-  // Reset selected trade when drawer closes
-  useEffect(() => { if (!open) setSelectedTradeId(null); }, [open]);
+  /* hasOpenedRef prevents a null/empty render before the first open */
+  const hasOpenedRef = useRef(false);
+  if (open) hasOpenedRef.current = true;
+
+  /* visible drives the CSS transition — double-rAF guarantees the browser
+     paints the closed position (translateY 100%) before the slide starts */
+  const [visible, setVisible] = useState(false);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  useEffect(() => {
+    if (open) {
+      let raf: number;
+      const t = setTimeout(() => { raf = requestAnimationFrame(() => setVisible(true)); }, 0);
+      return () => { clearTimeout(t); cancelAnimationFrame(raf); };
+    } else {
+      setVisible(false);
+      setSelectedTradeId(null);
+    }
+  }, [open]);
+
+  /* Body scroll-lock */
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  /* ESC key */
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [open]);
 
   const label = useMemo(() => {
     if (!date) return "";
@@ -75,38 +105,74 @@ const DayDetailSheet = memo(function DayDetailSheet({
     });
   }, [date]);
 
-  return (
-    <Drawer open={open} onOpenChange={(v) => !v && onClose()} snapPoints={[0.85]} fadeFromIndex={0}>
-      <DrawerContent
-        className="border-white/10 rounded-t-2xl px-0 pb-0 flex flex-col"
-        style={{ height: "85vh", background: "linear-gradient(180deg, #0a0a0a 0%, #000000 40%, #050508 100%)", position: "relative", overflow: "hidden" }}
+  const stopProp = useCallback((e: React.SyntheticEvent) => e.stopPropagation(), []);
+
+  if (!hasOpenedRef.current) return null;
+
+  return createPortal(
+    <div
+      aria-hidden={!open}
+      style={{ position: "fixed", inset: 0, zIndex: 75, pointerEvents: open ? "auto" : "none" }}
+    >
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "absolute", inset: 0,
+          background: "rgba(0,0,0,0.65)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          opacity: visible ? 1 : 0,
+          transition: `opacity ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? EASE_OPEN : EASE_CLOSE}`,
+        }}
+      />
+
+      {/* Sheet — slides up from bottom */}
+      <div
+        onClick={stopProp}
+        style={{
+          position: "absolute", left: 0, right: 0, bottom: 0,
+          height: "85dvh",
+          display: "flex", flexDirection: "column",
+          background: "linear-gradient(180deg, #0a0a0a 0%, #000000 40%, #050508 100%)",
+          borderRadius: "20px 20px 0 0",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          transform: visible ? "translateY(0)" : "translateY(100%)",
+          transition: `transform ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? EASE_OPEN : EASE_CLOSE}`,
+          willChange: "transform",
+          overflow: "hidden",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+        className="transform-gpu"
       >
-        {/* header */}
-        <div className="flex items-start justify-between px-5 mt-3 mb-4 flex-shrink-0">
-          <div>
-            <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-0.5">Daily Summary</p>
-            <p className="text-[15px] font-semibold text-white">{label}</p>
-          </div>
-          <DrawerClose asChild>
-            <button className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 text-muted-foreground hover:text-white transition-colors mt-0.5">
-              <X className="w-4 h-4" />
-            </button>
-          </DrawerClose>
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.15)" }} />
         </div>
 
-        {/* summary row */}
-        <div className="flex gap-2 px-5 mb-4">
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 mt-1 mb-4 flex-shrink-0">
+          <div>
+            <p className="text-[11px] text-white/40 uppercase tracking-widest mb-0.5">Daily Summary</p>
+            <p className="text-[15px] font-semibold text-white">{label}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 text-white/50 hover:text-white transition-colors mt-0.5"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Summary row */}
+        <div className="flex gap-2 px-5 mb-4 flex-shrink-0">
           <div className="dash-account-card dash-account-card-dim flex-1 p-3">
-            <p className="text-[10px] text-muted-foreground mb-1">Net P&amp;L</p>
+            <p className="text-[10px] text-white/40 mb-1">Net P&amp;L</p>
             <p className={`text-[16px] font-bold ${dailyPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
               {dailyPnl >= 0 ? "+" : ""}{fc(dailyPnl)}
             </p>
-            {dailyPnl > 0 && (
-              <p className="text-[10px] text-white/40 mt-1">Congrats, your day is profitable!</p>
-            )}
-            {dailyPnl < 0 && (
-              <p className="text-[10px] text-white/40 mt-1">Stay disciplined. Better trades ahead.</p>
-            )}
+            {dailyPnl > 0 && <p className="text-[10px] text-white/40 mt-1">Congrats, your day is profitable!</p>}
+            {dailyPnl < 0 && <p className="text-[10px] text-white/40 mt-1">Stay disciplined. Better trades ahead.</p>}
           </div>
           <div className="flex-1 p-3 pt-5">
             <div className="flex items-center gap-1.5 mb-2">
@@ -126,108 +192,92 @@ const DayDetailSheet = memo(function DayDetailSheet({
           </div>
         </div>
 
-        {/* trade list header */}
+        {/* Trade list header */}
         <div className="flex items-center justify-between px-5 pb-2 flex-shrink-0">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Trades</p>
+          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-widest">Trades</p>
           {!isLoading && dayTrades.length > 0 && (
-            <span className="text-[11px] font-semibold text-muted-foreground">{dayTrades.length}</span>
+            <span className="text-[11px] font-semibold text-white/40">{dayTrades.length}</span>
           )}
         </div>
 
-        {/* trade list */}
-        <div className="overflow-y-auto flex-1 pb-8 px-5" data-vaul-no-drag>
+        {/* Trade list */}
+        <div className="overflow-y-auto flex-1 pb-8 px-5" style={{ overscrollBehavior: "contain" }}>
           <div className="dash-account-card dash-account-card-dim overflow-hidden">
-          {isLoading && (
-            <div>
-              {[0, 1, 2].map(i => (
-                <div key={i} style={{ padding: "12px 20px", borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.055)" : "none" }}>
-                  <div className="flex items-center justify-between">
-                    <div className="h-4 w-28 rounded-lg shimmer-loading" />
-                    <div className="h-4 w-16 rounded-lg shimmer-loading" />
+            {isLoading && (
+              <div>
+                {[0, 1, 2].map(i => (
+                  <div key={i} style={{ padding: "12px 20px", borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.055)" : "none" }}>
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 w-28 rounded-lg shimmer-loading" />
+                      <div className="h-4 w-16 rounded-lg shimmer-loading" />
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="h-3 w-20 rounded shimmer-loading" />
+                      <div className="h-3 w-14 rounded shimmer-loading" />
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="h-3 w-20 rounded shimmer-loading" />
-                    <div className="h-3 w-14 rounded shimmer-loading" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {!isLoading && dayTrades.length === 0 && (
-            <div className="text-center py-10">
-              <p className="text-muted-foreground text-sm">No trades for this day.</p>
-            </div>
-          )}
-          {!isLoading && dayTrades.map((trade, idx) => {
-            const isLast   = idx === dayTrades.length - 1;
-            const pnl      = trade.pnl ?? 0;
-            const isWin    = pnl >= 0;
-            const fPrice   = (v: number) => v < 1 ? v.toFixed(4) : v.toLocaleString(undefined, { maximumFractionDigits: 1 });
-            const dateStr  = trade.entryDate
-              ? new Date(trade.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })
-              : "";
-
-            return (
-              <div
-                key={trade.id}
-                onClick={() => setSelectedTradeId(trade.id)}
-                style={{
-                  padding: "12px 20px",
-                  borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.12)",
-                  WebkitTapHighlightColor: "transparent",
-                  transition: "background 0.15s",
-                  cursor: "pointer",
-                }}
-                onPointerDown={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-                onPointerUp={e => (e.currentTarget.style.background = "transparent")}
-                onPointerLeave={e => (e.currentTarget.style.background = "transparent")}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-              >
-                {/* Row 1 — Symbol + side | PNL + chevron */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold leading-none" style={{ fontSize: 15, color: "#F0F0F0" }}>
-                      {trade.symbol}
-                    </span>
-                    <span className="font-semibold leading-none" style={{
-                      fontSize: 10,
-                      color: trade.side === "long" ? "#35C37A" : "#E0524F",
-                      letterSpacing: "0.06em",
-                    }}>
-                      {trade.side === "long" ? "LONG" : "SHORT"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold leading-none tabular-nums" style={{ fontSize: 14, color: isWin ? "#35C37A" : "#E0524F" }}>
-                      {isWin ? "+" : ""}{fc(pnl)}
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.2)" }} />
-                  </div>
-                </div>
-
-                {/* Row 2 — Entry → Exit | Date */}
-                <div className="flex items-center justify-between" style={{ marginTop: 6 }}>
-                  <div className="flex items-center gap-0.5">
-                    <span className="font-medium tabular-nums" style={{ fontSize: 12, color: "#6B6B6B" }}>
-                      {fPrice(trade.entryPrice ?? 0)}
-                    </span>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", margin: "0 2px" }}>→</span>
-                    <span className="font-medium tabular-nums" style={{ fontSize: 12, color: "#6B6B6B" }}>
-                      {trade.exitPrice != null ? fPrice(trade.exitPrice) : "—"}
-                    </span>
-                  </div>
-                  <span className="font-medium tabular-nums" style={{ fontSize: 12, color: "#6B6B6B" }}>
-                    {dateStr}
-                  </span>
-                </div>
+                ))}
               </div>
-            );
-          })}
+            )}
+            {!isLoading && dayTrades.length === 0 && (
+              <div className="text-center py-10">
+                <p className="text-white/40 text-sm">No trades for this day.</p>
+              </div>
+            )}
+            {!isLoading && dayTrades.map((trade, idx) => {
+              const isLast  = idx === dayTrades.length - 1;
+              const pnl     = trade.pnl ?? 0;
+              const isWin   = pnl >= 0;
+              const fPrice  = (v: number) => v < 1 ? v.toFixed(4) : v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+              const dateStr = trade.entryDate
+                ? new Date(trade.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+                : "";
+              return (
+                <div
+                  key={trade.id}
+                  onClick={() => setSelectedTradeId(trade.id)}
+                  style={{
+                    padding: "12px 20px",
+                    borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.12)",
+                    WebkitTapHighlightColor: "transparent",
+                    transition: "background 0.15s",
+                    cursor: "pointer",
+                  }}
+                  onPointerDown={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                  onPointerUp={e => (e.currentTarget.style.background = "transparent")}
+                  onPointerLeave={e => (e.currentTarget.style.background = "transparent")}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold leading-none" style={{ fontSize: 15, color: "#F0F0F0" }}>{trade.symbol}</span>
+                      <span className="font-semibold leading-none" style={{ fontSize: 10, color: trade.side === "long" ? "#35C37A" : "#E0524F", letterSpacing: "0.06em" }}>
+                        {trade.side === "long" ? "LONG" : "SHORT"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold leading-none tabular-nums" style={{ fontSize: 14, color: isWin ? "#35C37A" : "#E0524F" }}>
+                        {isWin ? "+" : ""}{fc(pnl)}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.2)" }} />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between" style={{ marginTop: 6 }}>
+                    <div className="flex items-center gap-0.5">
+                      <span className="font-medium tabular-nums" style={{ fontSize: 12, color: "#6B6B6B" }}>{fPrice(trade.entryPrice ?? 0)}</span>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", margin: "0 2px" }}>→</span>
+                      <span className="font-medium tabular-nums" style={{ fontSize: 12, color: "#6B6B6B" }}>
+                        {trade.exitPrice != null ? fPrice(trade.exitPrice) : "—"}
+                      </span>
+                    </div>
+                    <span className="font-medium tabular-nums" style={{ fontSize: 12, color: "#6B6B6B" }}>{dateStr}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* ── Trade Detail Overlay — slides in from the right within the Drawer ── */}
+        {/* Trade detail overlay — slides in from the right */}
         <AnimatePresence>
           {selectedTrade && (
             <motion.div
@@ -237,19 +287,16 @@ const DayDetailSheet = memo(function DayDetailSheet({
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 32, stiffness: 320 }}
               style={{
-                position: "absolute",
-                inset: 0,
+                position: "absolute", inset: 0,
                 background: "#000000",
-                zIndex: 20,
-                display: "flex",
-                flexDirection: "column",
+                zIndex: 10,
+                display: "flex", flexDirection: "column",
                 overflowY: "auto",
                 borderRadius: "inherit",
               }}
-              data-vaul-no-drag
             >
               {/* Nav header */}
-              <div className="flex items-center px-4 h-14 flex-shrink-0" style={{ background: "#000000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center px-4 h-14 flex-shrink-0 relative" style={{ background: "#000000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <button
                   onClick={() => setSelectedTradeId(null)}
                   className="flex items-center justify-center w-8 h-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
@@ -266,20 +313,14 @@ const DayDetailSheet = memo(function DayDetailSheet({
                     <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Symbol</p>
                     <h2 className="text-2xl font-black tracking-tight text-white leading-none">{selectedTrade.symbol}</h2>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
-                    selectedTrade.side === "long"
-                      ? "bg-blue-500/15 text-blue-400 border border-blue-500/20"
-                      : "bg-orange-500/15 text-orange-400 border border-orange-500/20"
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${selectedTrade.side === "long" ? "bg-blue-500/15 text-blue-400 border border-blue-500/20" : "bg-orange-500/15 text-orange-400 border border-orange-500/20"}`}>
                     {selectedTrade.side === "long" ? "LONG" : "SHORT"}
                   </span>
                 </div>
                 <div className="mx-4 h-px bg-white/[0.06]" />
                 <div className="flex items-center justify-between px-4 pt-3 pb-4">
                   <div>
-                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">
-                      {(selectedTrade.pnl ?? 0) >= 0 ? "Profit" : "Loss"}
-                    </p>
+                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">{(selectedTrade.pnl ?? 0) >= 0 ? "Profit" : "Loss"}</p>
                     <p className={`text-xl font-black ${(selectedTrade.pnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                       {(selectedTrade.pnl ?? 0) >= 0 ? "+" : ""}{fc(selectedTrade.pnl ?? 0)}
                     </p>
@@ -293,7 +334,7 @@ const DayDetailSheet = memo(function DayDetailSheet({
                 </div>
               </div>
 
-              {/* Metrics grid */}
+              {/* Metrics + rest */}
               <div className="px-4 py-4 space-y-5">
                 <div className="grid grid-cols-2 gap-2.5">
                   {[
@@ -310,35 +351,21 @@ const DayDetailSheet = memo(function DayDetailSheet({
                     </div>
                   ))}
                 </div>
-
-                {/* Analysis */}
                 <div className="space-y-2.5">
                   <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Analysis</p>
                   {(selectedTrade.tvLink || TV_LINKS[selectedTrade.symbol as keyof typeof TV_LINKS]) ? (
-                    <button
-                      className="tv-chart-btn w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[13px] font-semibold"
-                      onClick={() => window.open(selectedTrade.tvLink || TV_LINKS[selectedTrade.symbol as keyof typeof TV_LINKS], "_blank")}
-                    >
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4" />
-                        Open TradingView Chart
-                      </div>
+                    <button className="tv-chart-btn w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[13px] font-semibold"
+                      onClick={() => window.open(selectedTrade.tvLink || TV_LINKS[selectedTrade.symbol as keyof typeof TV_LINKS], "_blank")}>
+                      <div className="flex items-center gap-2"><TrendingUp className="w-4 h-4" />Open TradingView Chart</div>
                       <ExternalLink className="w-3.5 h-3.5 opacity-70" />
                     </button>
                   ) : (
-                    <div className="px-4 py-2.5 rounded-xl border border-dashed border-white/[0.08] text-[12px] text-white/40 italic">
-                      No chart linked for this trade
-                    </div>
+                    <div className="px-4 py-2.5 rounded-xl border border-dashed border-white/[0.08] text-[12px] text-white/40 italic">No chart linked</div>
                   )}
                   {selectedTrade.screenshot ? (
-                    <div
-                      className="rounded-xl overflow-hidden border border-white/[0.08] cursor-pointer group relative"
-                      onClick={() => window.open(selectedTrade.screenshot!, "_blank")}
-                    >
+                    <div className="rounded-xl overflow-hidden border border-white/[0.08] cursor-pointer group relative" onClick={() => window.open(selectedTrade.screenshot!, "_blank")}>
                       <img src={selectedTrade.screenshot} alt="Trade Screenshot" className="w-full max-h-44 object-cover group-hover:opacity-90 transition-opacity" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                        <ExternalLink className="w-5 h-5 text-white" />
-                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30"><ExternalLink className="w-5 h-5 text-white" /></div>
                     </div>
                   ) : (
                     <div className="h-20 rounded-xl border border-dashed border-white/[0.07] flex items-center justify-center gap-2 text-[12px] text-white/40 italic">
@@ -346,15 +373,11 @@ const DayDetailSheet = memo(function DayDetailSheet({
                     </div>
                   )}
                 </div>
-
-                {/* Tags */}
                 <div className="space-y-3">
                   <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Tags</p>
                   {selectedTrade.setupTags && (
                     <div>
-                      <p className="text-[11px] text-white/50 mb-1.5 flex items-center gap-1">
-                        <Tag className="w-3 h-3" /> Setup
-                      </p>
+                      <p className="text-[11px] text-white/50 mb-1.5 flex items-center gap-1"><Tag className="w-3 h-3" /> Setup</p>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedTrade.setupTags.split(",").filter(Boolean).map(tag => (
                           <span key={tag} className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-primary/12 text-primary border border-primary/20">{tag}</span>
@@ -364,9 +387,7 @@ const DayDetailSheet = memo(function DayDetailSheet({
                   )}
                   {selectedTrade.mistakeTags && (
                     <div>
-                      <p className="text-[11px] text-white/50 mb-1.5 flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3 text-red-400/70" /> Mistakes
-                      </p>
+                      <p className="text-[11px] text-white/50 mb-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3 text-red-400/70" /> Mistakes</p>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedTrade.mistakeTags.split(",").filter(Boolean).map(tag => (
                           <span key={tag} className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">{tag}</span>
@@ -378,16 +399,10 @@ const DayDetailSheet = memo(function DayDetailSheet({
                     <p className="text-[12px] text-white/40 italic">No tags recorded</p>
                   )}
                 </div>
-
-                {/* Notes */}
                 <div className="space-y-2 pb-8">
-                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1">
-                    <FileText className="w-3 h-3" /> Journal Notes
-                  </p>
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1"><FileText className="w-3 h-3" /> Journal Notes</p>
                   {selectedTrade.notes ? (
-                    <div className="p-4 rounded-xl text-[13px] leading-relaxed text-white/70" style={{ background: "#111111", border: "1px solid rgba(255,255,255,0.09)" }}>
-                      {selectedTrade.notes}
-                    </div>
+                    <div className="p-4 rounded-xl text-[13px] leading-relaxed text-white/70" style={{ background: "#111111", border: "1px solid rgba(255,255,255,0.09)" }}>{selectedTrade.notes}</div>
                   ) : (
                     <p className="text-[12px] text-white/40 italic">No notes recorded for this trade.</p>
                   )}
@@ -396,8 +411,9 @@ const DayDetailSheet = memo(function DayDetailSheet({
             </motion.div>
           )}
         </AnimatePresence>
-      </DrawerContent>
-    </Drawer>
+      </div>
+    </div>,
+    document.body,
   );
 });
 
