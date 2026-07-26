@@ -99,9 +99,6 @@ export function MobileBottomNav() {
 
   const activeIconColor   = isLight ? "#7C3AED"                  : "#ffffff";
   const inactiveIconColor = isLight ? "#9CA3AF"                  : "rgba(148,163,184,0.44)";
-  const activeIconFilter  = isLight
-    ? "drop-shadow(0 0 5px rgba(124,58,237,0.70)) drop-shadow(0 0 11px rgba(124,58,237,0.40))"
-    : "drop-shadow(0 0 5px rgba(200,215,255,0.90)) drop-shadow(0 0 11px rgba(165,180,252,0.55)) drop-shadow(0 0 20px rgba(99,102,241,0.32))";
   const activeLabelColor   = isLight ? "#7C3AED"                  : "rgba(255,255,255,0.92)";
   const inactiveLabelColor = isLight ? "#9CA3AF"                  : "rgba(148,163,184,0.40)";
   const badgeBorder        = isLight ? "rgba(255,255,255,0.95)"   : "rgba(12,14,19,0.9)";
@@ -186,8 +183,7 @@ export function MobileBottomNav() {
                         height:     22,
                         flexShrink: 0,
                         color:      active ? activeIconColor : inactiveIconColor,
-                        filter:     active ? activeIconFilter : "none",
-                        transition: "color 0.22s ease, filter 0.22s ease",
+                        transition: "color 0.22s ease",
                         display:    "block",
                       }}
                     />
