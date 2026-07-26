@@ -4,13 +4,14 @@ import {
   useGetCalendarHeatmap,
 } from "@workspace/api-client-react";
 import { useCurrencyFormatter, useCurrencyAxisFormatter } from "@/store/currencyStore";
-import { Activity, ChevronRight, ChevronLeft, X } from "lucide-react";
+import { Activity, ChevronRight, ChevronLeft, X, ArrowLeft, TrendingUp, ExternalLink, ImageIcon, Tag, AlertTriangle, FileText } from "lucide-react";
 import AccountValueWidget from "@/components/AccountValueWidget";
 import DashboardSegmentedControl from "@/components/DashboardSegmentedControl";
 import { useCombinedPortfolio } from "@/store/combinedPortfolioStore";
 import { useBrokerStore } from "@/store/brokerStore";
 import { Link } from "wouter";
-import { BROKER_MAP, BROKER_INFO } from "@/data/sampleData";
+import { BROKER_MAP, BROKER_INFO, TV_LINKS } from "@/data/sampleData";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTickStore } from "@/store/tickStore";
 import { useChartStore } from "@/store/chartStore";
 import {
@@ -59,6 +60,14 @@ const DayDetailSheet = memo(function DayDetailSheet({
   const losses    = dayTrades.filter(t => (t.pnl ?? 0) < 0).length;
   const dailyPnl  = dayTrades.reduce((sum, t) => sum + (t.pnl ?? 0), 0);
 
+  const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
+  const selectedTrade = selectedTradeId != null
+    ? (dayTrades.find(t => t.id === selectedTradeId) ?? null)
+    : null;
+
+  // Reset selected trade when drawer closes
+  useEffect(() => { if (!open) setSelectedTradeId(null); }, [open]);
+
   const label = useMemo(() => {
     if (!date) return "";
     return new Date(date + "T00:00:00").toLocaleDateString("en-US", {
@@ -68,7 +77,10 @@ const DayDetailSheet = memo(function DayDetailSheet({
 
   return (
     <Drawer open={open} onOpenChange={(v) => !v && onClose()} snapPoints={[0.85]} fadeFromIndex={0}>
-      <DrawerContent className="border-white/10 rounded-t-2xl px-0 pb-0 flex flex-col" style={{ height: "85vh", background: "linear-gradient(180deg, #0a0a0a 0%, #000000 40%, #050508 100%)" }}>
+      <DrawerContent
+        className="border-white/10 rounded-t-2xl px-0 pb-0 flex flex-col"
+        style={{ height: "85vh", background: "linear-gradient(180deg, #0a0a0a 0%, #000000 40%, #050508 100%)", position: "relative", overflow: "hidden" }}
+      >
         {/* header */}
         <div className="flex items-start justify-between px-5 mt-3 mb-4 flex-shrink-0">
           <div>
@@ -150,7 +162,6 @@ const DayDetailSheet = memo(function DayDetailSheet({
             const isLast   = idx === dayTrades.length - 1;
             const pnl      = trade.pnl ?? 0;
             const isWin    = pnl >= 0;
-            const pnlColor = isWin ? "#35C37A" : "#E0524F";
             const fPrice   = (v: number) => v < 1 ? v.toFixed(4) : v.toLocaleString(undefined, { maximumFractionDigits: 1 });
             const dateStr  = trade.entryDate
               ? new Date(trade.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })
@@ -159,16 +170,21 @@ const DayDetailSheet = memo(function DayDetailSheet({
             return (
               <div
                 key={trade.id}
+                onClick={() => setSelectedTradeId(trade.id)}
                 style={{
                   padding: "12px 20px",
                   borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.12)",
                   WebkitTapHighlightColor: "transparent",
                   transition: "background 0.15s",
+                  cursor: "pointer",
                 }}
+                onPointerDown={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                onPointerUp={e => (e.currentTarget.style.background = "transparent")}
+                onPointerLeave={e => (e.currentTarget.style.background = "transparent")}
                 onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >
-                {/* Row 1 — Symbol + side | PNL */}
+                {/* Row 1 — Symbol + side | PNL + chevron */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold leading-none" style={{ fontSize: 15, color: "#F0F0F0" }}>
@@ -182,9 +198,12 @@ const DayDetailSheet = memo(function DayDetailSheet({
                       {trade.side === "long" ? "LONG" : "SHORT"}
                     </span>
                   </div>
-                  <span className="font-bold leading-none tabular-nums" style={{ fontSize: 14, color: "#ffffff" }}>
-                    {isWin ? "+" : ""}{fc(pnl)}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold leading-none tabular-nums" style={{ fontSize: 14, color: isWin ? "#35C37A" : "#E0524F" }}>
+                      {isWin ? "+" : ""}{fc(pnl)}
+                    </span>
+                    <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "rgba(255,255,255,0.2)" }} />
+                  </div>
                 </div>
 
                 {/* Row 2 — Entry → Exit | Date */}
@@ -207,6 +226,176 @@ const DayDetailSheet = memo(function DayDetailSheet({
           })}
           </div>
         </div>
+
+        {/* ── Trade Detail Overlay — slides in from the right within the Drawer ── */}
+        <AnimatePresence>
+          {selectedTrade && (
+            <motion.div
+              key="trade-detail"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 32, stiffness: 320 }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "#000000",
+                zIndex: 20,
+                display: "flex",
+                flexDirection: "column",
+                overflowY: "auto",
+                borderRadius: "inherit",
+              }}
+              data-vaul-no-drag
+            >
+              {/* Nav header */}
+              <div className="flex items-center px-4 h-14 flex-shrink-0" style={{ background: "#000000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <button
+                  onClick={() => setSelectedTradeId(null)}
+                  className="flex items-center justify-center w-8 h-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <span className="absolute left-1/2 -translate-x-1/2 text-[15px] font-semibold text-white tracking-tight">Trade Details</span>
+              </div>
+
+              {/* Summary card */}
+              <div className="mx-4 mt-4 mb-1 rounded-2xl border border-white/[0.08] overflow-hidden" style={{ background: "linear-gradient(145deg,#0f0f0f 0%,#0a0a0a 100%)" }}>
+                <div className="flex items-center justify-between px-4 pt-4 pb-3">
+                  <div>
+                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Symbol</p>
+                    <h2 className="text-2xl font-black tracking-tight text-white leading-none">{selectedTrade.symbol}</h2>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
+                    selectedTrade.side === "long"
+                      ? "bg-blue-500/15 text-blue-400 border border-blue-500/20"
+                      : "bg-orange-500/15 text-orange-400 border border-orange-500/20"
+                  }`}>
+                    {selectedTrade.side === "long" ? "LONG" : "SHORT"}
+                  </span>
+                </div>
+                <div className="mx-4 h-px bg-white/[0.06]" />
+                <div className="flex items-center justify-between px-4 pt-3 pb-4">
+                  <div>
+                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">
+                      {(selectedTrade.pnl ?? 0) >= 0 ? "Profit" : "Loss"}
+                    </p>
+                    <p className={`text-xl font-black ${(selectedTrade.pnl ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      {(selectedTrade.pnl ?? 0) >= 0 ? "+" : ""}{fc(selectedTrade.pnl ?? 0)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Date</p>
+                    <p className="text-[13px] font-semibold text-white/80">
+                      {new Date(selectedTrade.entryDate).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Metrics grid */}
+              <div className="px-4 py-4 space-y-5">
+                <div className="grid grid-cols-2 gap-2.5">
+                  {[
+                    { label: "Entry",         value: fc(selectedTrade.entryPrice ?? 0) },
+                    { label: "Exit",          value: selectedTrade.exitPrice == null ? "—" : fc(selectedTrade.exitPrice) },
+                    { label: "Risk / Reward", value: selectedTrade.riskRewardRatio ? `${selectedTrade.riskRewardRatio.toFixed(2)}R` : "—" },
+                    { label: "Quantity",      value: String(selectedTrade.quantity) },
+                    { label: "Stop Loss",     value: selectedTrade.stopLoss ? fc(selectedTrade.stopLoss) : "—" },
+                    { label: "Take Profit",   value: selectedTrade.takeProfit ? fc(selectedTrade.takeProfit) : "—" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="p-3 rounded-xl border" style={{ background: "#111111", borderColor: "rgba(255,255,255,0.09)" }}>
+                      <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-1">{label}</p>
+                      <p className="text-[14px] font-bold font-mono text-white leading-tight">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Analysis */}
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Analysis</p>
+                  {(selectedTrade.tvLink || TV_LINKS[selectedTrade.symbol as keyof typeof TV_LINKS]) ? (
+                    <button
+                      className="tv-chart-btn w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[13px] font-semibold"
+                      onClick={() => window.open(selectedTrade.tvLink || TV_LINKS[selectedTrade.symbol as keyof typeof TV_LINKS], "_blank")}
+                    >
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4" />
+                        Open TradingView Chart
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                    </button>
+                  ) : (
+                    <div className="px-4 py-2.5 rounded-xl border border-dashed border-white/[0.08] text-[12px] text-white/40 italic">
+                      No chart linked for this trade
+                    </div>
+                  )}
+                  {selectedTrade.screenshot ? (
+                    <div
+                      className="rounded-xl overflow-hidden border border-white/[0.08] cursor-pointer group relative"
+                      onClick={() => window.open(selectedTrade.screenshot!, "_blank")}
+                    >
+                      <img src={selectedTrade.screenshot} alt="Trade Screenshot" className="w-full max-h-44 object-cover group-hover:opacity-90 transition-opacity" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                        <ExternalLink className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-20 rounded-xl border border-dashed border-white/[0.07] flex items-center justify-center gap-2 text-[12px] text-white/40 italic">
+                      <ImageIcon className="w-4 h-4 opacity-50" /> No screenshot attached
+                    </div>
+                  )}
+                </div>
+
+                {/* Tags */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Tags</p>
+                  {selectedTrade.setupTags && (
+                    <div>
+                      <p className="text-[11px] text-white/50 mb-1.5 flex items-center gap-1">
+                        <Tag className="w-3 h-3" /> Setup
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedTrade.setupTags.split(",").filter(Boolean).map(tag => (
+                          <span key={tag} className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-primary/12 text-primary border border-primary/20">{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedTrade.mistakeTags && (
+                    <div>
+                      <p className="text-[11px] text-white/50 mb-1.5 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-red-400/70" /> Mistakes
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedTrade.mistakeTags.split(",").filter(Boolean).map(tag => (
+                          <span key={tag} className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!selectedTrade.setupTags && !selectedTrade.mistakeTags && (
+                    <p className="text-[12px] text-white/40 italic">No tags recorded</p>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2 pb-8">
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest flex items-center gap-1">
+                    <FileText className="w-3 h-3" /> Journal Notes
+                  </p>
+                  {selectedTrade.notes ? (
+                    <div className="p-4 rounded-xl text-[13px] leading-relaxed text-white/70" style={{ background: "#111111", border: "1px solid rgba(255,255,255,0.09)" }}>
+                      {selectedTrade.notes}
+                    </div>
+                  ) : (
+                    <p className="text-[12px] text-white/40 italic">No notes recorded for this trade.</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </DrawerContent>
     </Drawer>
   );
