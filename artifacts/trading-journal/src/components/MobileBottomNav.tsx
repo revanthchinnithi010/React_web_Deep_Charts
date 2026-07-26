@@ -75,33 +75,21 @@ export function MobileBottomNav() {
     }
   }, [activeIdx, mobileChartFullscreen]);
 
-  /* ── Light-theme palette ── */
-  const pillBg          = isLight ? "rgba(255,255,255,0.99)"      : "rgba(12,14,19,0.97)";
-  const pillInsetShadow = isLight
-    ? "inset 0 1px 0 rgba(0,0,0,0.04), inset 0 -1px 0 rgba(0,0,0,0.03)"
-    : "inset 0 1px 0 rgba(255,255,255,0.09), inset 0 -1px 0 rgba(0,0,0,0.3)";
-  const wrapperGradient = isLight
-    ? "linear-gradient(135deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.04) 30%, rgba(0,0,0,0.02) 58%, rgba(0,0,0,0.09) 100%)"
-    : "linear-gradient(135deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.14) 30%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.28) 100%)";
-  const wrapperShadow = isLight
-    ? [
-        "0 0 0 1px rgba(0,0,0,0.06)",
-        "0 -1px 0 #E5E7EB",
-        "0 8px 32px rgba(0,0,0,0.10)",
-        "0 2px 10px rgba(0,0,0,0.06)",
-      ].join(",")
-    : [
-        "0 0 0 1px rgba(255,255,255,0.06)",
-        "0 12px 40px rgba(0,0,0,0.65)",
-        "0 0 20px rgba(0,0,0,0.30)",
-        "0 2px 10px rgba(0,0,0,0.40)",
-      ].join(",");
+  /* ── Deep black minimalist palette ── */
+  const pillBg          = "rgba(5,5,8,0.82)";
+  const pillInsetShadow = "inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.40)";
+  const wrapperGradient = "none";
+  const wrapperShadow   = [
+    "0 0 0 1px rgba(255,255,255,0.06)",
+    "0 8px 32px rgba(0,0,0,0.70)",
+    "0 2px 8px rgba(0,0,0,0.50)",
+  ].join(",");
 
-  const activeIconColor   = isLight ? "#7C3AED"                  : "#ffffff";
-  const inactiveIconColor = isLight ? "#9CA3AF"                  : "rgba(148,163,184,0.44)";
-  const activeLabelColor   = isLight ? "#7C3AED"                  : "rgba(255,255,255,0.92)";
-  const inactiveLabelColor = isLight ? "#9CA3AF"                  : "rgba(148,163,184,0.40)";
-  const badgeBorder        = isLight ? "rgba(255,255,255,0.95)"   : "rgba(12,14,19,0.9)";
+  const activeIconColor    = "#ffffff";
+  const inactiveIconColor  = "rgba(148,163,184,0.44)";
+  const activeLabelColor   = "rgba(255,255,255,0.92)";
+  const inactiveLabelColor = "rgba(148,163,184,0.40)";
+  const badgeBorder        = "rgba(5,5,8,0.9)";
 
   return (
     <div
