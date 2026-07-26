@@ -78,9 +78,8 @@ export function MobileBottomNav() {
   /* ── Deep black minimalist palette ── */
   const pillBg          = "rgba(5,5,8,0.82)";
   const pillInsetShadow = "inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.40)";
-  const wrapperGradient = "none";
+  const wrapperGradient = "linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.06) 40%, rgba(0,0,0,0.30) 70%, rgba(0,0,0,0.55) 100%)";
   const wrapperShadow   = [
-    "0 0 0 1px rgba(255,255,255,0.06)",
     "0 8px 32px rgba(0,0,0,0.70)",
     "0 2px 8px rgba(0,0,0,0.50)",
   ].join(",");
