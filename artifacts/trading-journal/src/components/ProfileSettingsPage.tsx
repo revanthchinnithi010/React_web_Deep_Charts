@@ -301,12 +301,14 @@ export const ProfileSettingsPage = memo(function ProfileSettingsPage({
   useEffect(() => {
     if (open) {
       setRendered(true);
-      const id = requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
+      let rafId: number;
+      const id = setTimeout(() => { rafId = requestAnimationFrame(() => setVisible(true)); }, 0);
       fetchStatus();
       fetchIp();
       pollRef.current = setInterval(fetchStatus, 15_000);
       return () => {
-        cancelAnimationFrame(id);
+        clearTimeout(id);
+        cancelAnimationFrame(rafId);
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       };
     } else {

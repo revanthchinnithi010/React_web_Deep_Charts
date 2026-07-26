@@ -87,8 +87,9 @@ export const SecuritySettingsPage = memo(function SecuritySettingsPage({
   useEffect(() => {
     if (open) {
       setRendered(true);
-      const id = requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
-      return () => cancelAnimationFrame(id);
+      let rafId: number;
+      const id = setTimeout(() => { rafId = requestAnimationFrame(() => setVisible(true)); }, 0);
+      return () => { clearTimeout(id); cancelAnimationFrame(rafId); };
     } else {
       setVisible(false);
       const id = setTimeout(() => setRendered(false), DUR_CLOSE + 40);
