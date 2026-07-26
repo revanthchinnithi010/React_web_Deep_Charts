@@ -64,13 +64,16 @@ const TYPE_CFG: Record<NotifType, { icon: React.ElementType; color: string; bg: 
 };
 
 /* ─── animation constants ────────────────────────────────────────────────────
-   Only `opacity` + `transform: translate3d(...)` are ever animated — plain
-   CSS transitions, compositor-only, no framer-motion / layout animation. */
+   Mirrors ProfilePage exactly — pure CSS `transform: translateX` on the sheet,
+   opacity-only on the backdrop. Both run on the GPU compositor thread.
 
-const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";   /* spring-like: fast settle, tiny overshoot */
-const EASE_CLOSE = "cubic-bezier(0.4,0,0.55,1)";   /* smooth deceleration out */
-const OPEN_MS    = 320;
-const CLOSE_MS   = 240;
+   Open:  translateX(100%) → translateX(0)   230 ms cubic-bezier(0.22,1,0.36,1)
+   Close: translateX(0)    → translateX(100%) 210 ms cubic-bezier(0.4,0,0.6,1) */
+
+const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";
+const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
+const DUR_OPEN   = 230;
+const DUR_CLOSE  = 210;
 
 /* ─── memoised sub-components ─────────────────────────────────────────────── */
 
@@ -136,19 +139,35 @@ const NotifList = memo(function NotifList({
 
 /* ─── component ───────────────────────────────────────────────────────────── */
 
-interface Props { open: boolean; onClose: () => void; origin?: { x: number; y: number } | null; }
+interface Props { open: boolean; onClose: () => void; }
 
-export const NotificationPanel = memo(function NotificationPanel({ open, onClose, origin }: Props) {
+export const NotificationPanel = memo(function NotificationPanel({ open, onClose }: Props) {
   const { notifications, unreadCount, markRead, markAllRead, clearAll } = useNotifications();
 
   const hasOpenedRef = useRef(open);
   if (open) hasOpenedRef.current = true;
 
-  /* Lazy-render the (potentially long) notification list one frame after
-     `open` flips true, so the transform+opacity tween gets a clean first
-     frame with nothing else competing for layout/paint. The data itself is
-     already in memory (context), so this only defers list DOM work, not a
-     network fetch. */
+  /* `visible` drives the CSS transition — mirrors ProfilePage exactly.
+     setTimeout(0) pushes past React's commit + pending microtasks so the
+     browser paints the closed position (translateX(100%)) before we flip
+     to the open position and start the slide-in. A single rAF then syncs
+     to the next paint cycle. Without this double-step, both RAF callbacks
+     can fire before a paint, skipping the start frame intermittently. */
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (open) {
+      let rafId: number;
+      const timerId = setTimeout(() => {
+        rafId = requestAnimationFrame(() => setVisible(true));
+      }, 0);
+      return () => { clearTimeout(timerId); cancelAnimationFrame(rafId); };
+    } else {
+      setVisible(false);
+    }
+  }, [open]);
+
+  /* Lazy-render the list one frame after open to keep the slide-in frame
+     free of list layout/paint work. Data is already in memory (context). */
   const [listReady, setListReady] = useState(false);
   useEffect(() => {
     if (!open) { setListReady(false); return; }
@@ -156,24 +175,10 @@ export const NotificationPanel = memo(function NotificationPanel({ open, onClose
     return () => cancelAnimationFrame(id);
   }, [open]);
 
-  /* `onClose` is a fresh arrow function on every parent re-render (which
-     happens on every live price tick). Effects below must depend ONLY on
-     `open` — depending on `onClose` too would tear the listeners down and
-     rebuild them dozens of times a second, and (for the back-button effect)
-     would spuriously call history.back()/re-push on every tick, closing the
-     sheet almost immediately after it opens. A ref keeps the callback fresh
-     without making it a dependency. */
+  /* `onClose` is a fresh arrow on every parent re-render (live price ticks).
+     Effects must depend ONLY on `open` — a ref keeps the callback stable. */
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-
-  /* Capture the bell's viewport-centre coordinates at the moment the panel
-     opens so the scale animation stays anchored there even if layout shifts
-     during the transition.  A ref (not state) avoids any re-render. */
-  const originRef = useRef(origin);
-  if (open && origin) originRef.current = origin;
-  const transformOrigin = originRef.current
-    ? `${originRef.current.x}px ${originRef.current.y}px`
-    : `calc(100% - 44px) 44px`; // fallback: approx bell position, top-right
 
   /* body scroll lock — background page must never scroll while open */
   useEffect(() => {
@@ -221,30 +226,33 @@ export const NotificationPanel = memo(function NotificationPanel({ open, onClose
         height: "100dvh", width: "100vw",
         /* Above MobileBottomNav (z-index 60) so the sheet is truly
            fullscreen — nothing (including the bottom nav bar) may render
-           above it while open. */
+           above it while open. pointerEvents guards interaction without
+           hiding the element (so the close slide-out is visible). */
         zIndex: 70,
-        visibility: open ? "visible" : "hidden",
         pointerEvents: open ? "auto" : "none",
       }}
     >
-      {/* Backdrop — opacity-only CSS transition. blur is a static, non-animated
-          value (never transitioned) so it never triggers per-frame repaint cost. */}
+      {/* Backdrop — opacity-only CSS transition, synced to `visible` so it
+          fades in/out in step with the sheet slide. blur is static (never
+          transitioned) to avoid per-frame repaint cost. */}
       <div
         onClick={onBackdropClick}
         style={{
           position: "absolute", inset: 0,
-          background: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          opacity: open ? 1 : 0,
-          transition: `opacity ${open ? OPEN_MS : CLOSE_MS}ms ${open ? EASE_OPEN : EASE_CLOSE}`,
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          opacity: visible ? 1 : 0,
+          transition: `opacity ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? EASE_OPEN : EASE_CLOSE}`,
         }}
       />
 
-      {/* Fullscreen sheet — GPU-composited transform + opacity only.
-          Open:  slides down from -28 px + fades in + gentle scale-up from 0.97.
-          Close: slides up to -20 px + fades out + scale-down to 0.98.
-          Only `opacity` + `transform` are animated — compositor-thread only. */}
+      {/* Fullscreen sheet — GPU-composited translateX only, mirroring
+          ProfilePage exactly. No opacity on the sheet itself (transform
+          handles all visibility); the parent's pointerEvents prevents
+          interaction when off-screen.
+          Open:  translateX(100%) → translateX(0)   230 ms EASE_OPEN
+          Close: translateX(0)    → translateX(100%) 210 ms EASE_CLOSE */}
       <div
         role="dialog"
         aria-modal="true"
@@ -256,20 +264,9 @@ export const NotificationPanel = memo(function NotificationPanel({ open, onClose
           height: "100%",
           display: "flex", flexDirection: "column",
           background: "#0a0a0a",
-          transform: open
-            ? "translate3d(0,0,0) scale(1)"
-            : "translate3d(0,-28px,0) scale(0.97)",
-          opacity: open ? 1 : 0,
-          transition: open
-            ? [
-                `transform ${OPEN_MS}ms ${EASE_OPEN}`,
-                `opacity ${Math.round(OPEN_MS * 0.60)}ms ${EASE_OPEN}`,
-              ].join(", ")
-            : [
-                `transform ${CLOSE_MS}ms ${EASE_CLOSE}`,
-                `opacity ${Math.round(CLOSE_MS * 0.80)}ms ${EASE_CLOSE}`,
-              ].join(", "),
-          willChange: "transform, opacity",
+          transform: visible ? "translate3d(0,0,0)" : "translate3d(100%,0,0)",
+          transition: `transform ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? EASE_OPEN : EASE_CLOSE}`,
+          willChange: "transform",
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
         className="transform-gpu"
