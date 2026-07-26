@@ -488,71 +488,110 @@ export const ProfilePage = memo(function ProfilePage({
                 </div>
               </div>
 
-              {/* ── Personal Info ──────────────────────────────────────────────── */}
-              <Card>
-                <SectionLabel>Personal Info</SectionLabel>
-                <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <FieldLabel>Full Name</FieldLabel>
+              {/* ── Personal Info — dash-account-card style ─────────────────── */}
+              <div className="dash-account-card" style={{ padding: "18px 20px" }}>
+
+                {/* Section label — same uppercase stat-sub style as card labels */}
+                <p style={{
+                  fontSize: 11, fontWeight: 700, letterSpacing: "0.12em",
+                  textTransform: "uppercase", color: "var(--stat-sub)",
+                  marginBottom: 14, lineHeight: 1,
+                }}>
+                  Personal Info
+                </p>
+
+                {/* Two editable bar rows — identical inner-grid style to
+                    the UPNL / Net PnL sub-widget rows in Account Value card */}
+                <div style={{
+                  borderRadius: 16, overflow: "hidden",
+                  background: "rgba(255,255,255,0.04)",
+                  border:     "1px solid rgba(255,255,255,0.08)",
+                }}>
+
+                  {/* Full Name bar */}
+                  <div style={{
+                    display: "flex", alignItems: "center",
+                    padding: "13px 16px",
+                    borderBottom: "1px solid rgba(255,255,255,0.08)",
+                  }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, letterSpacing: "0.10em",
+                      textTransform: "uppercase", color: "var(--stat-sub)",
+                      flexShrink: 0, width: 88,
+                    }}>
+                      Full Name
+                    </span>
                     <input
                       value={name}
                       onChange={e => setName(e.target.value)}
                       placeholder="Your name"
                       style={{
-                        width: "100%", boxSizing: "border-box",
-                        background: "#1A1A1A",
-                        border: "1px solid rgba(255,255,255,0.09)",
-                        borderRadius: 12, padding: "10px 14px",
-                        fontSize: 14, color: "rgba(255,255,255,0.88)",
-                        outline: "none",
+                        flex: 1, minWidth: 0,
+                        background: "transparent", border: "none", outline: "none",
+                        fontSize: 15, fontWeight: 700,
+                        color: "var(--stat-value)",
+                        textAlign: "right",
+                        letterSpacing: "-0.01em",
                       }}
-                      onFocus={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(165,180,252,0.50)"; }}
-                      onBlur={e  => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.09)"; }}
                     />
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <FieldLabel>Email Address</FieldLabel>
+
+                  {/* Email Address bar */}
+                  <div style={{
+                    display: "flex", alignItems: "center",
+                    padding: "13px 16px",
+                  }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, letterSpacing: "0.10em",
+                      textTransform: "uppercase", color: "var(--stat-sub)",
+                      flexShrink: 0, width: 88,
+                    }}>
+                      Email
+                    </span>
                     <input
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       placeholder="your@email.com"
                       style={{
-                        width: "100%", boxSizing: "border-box",
-                        background: "#1A1A1A",
-                        border: "1px solid rgba(255,255,255,0.09)",
-                        borderRadius: 12, padding: "10px 14px",
-                        fontSize: 14, color: "rgba(255,255,255,0.88)",
-                        outline: "none",
+                        flex: 1, minWidth: 0,
+                        background: "transparent", border: "none", outline: "none",
+                        fontSize: 15, fontWeight: 700,
+                        color: "var(--stat-value)",
+                        textAlign: "right",
+                        letterSpacing: "-0.01em",
                       }}
-                      onFocus={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(165,180,252,0.50)"; }}
-                      onBlur={e  => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.09)"; }}
                     />
                   </div>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving || !name.trim()}
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      padding: "11px 20px", borderRadius: 14,
-                      background: saved
-                        ? "rgba(16,185,129,0.16)"
-                        : "rgba(165,180,252,0.12)",
-                      border: saved
-                        ? "1px solid rgba(16,185,129,0.28)"
-                        : "1px solid rgba(165,180,252,0.22)",
-                      color: saved ? "#34d399" : "#a5b4fc",
-                      fontSize: 13, fontWeight: 600,
-                      cursor: saving || !name.trim() ? "default" : "pointer",
-                      opacity: saving || !name.trim() ? 0.5 : 1,
-                      transition: "background 150ms, border-color 150ms, color 150ms",
-                    }}
-                  >
-                    <Save style={{ width: 13, height: 13 }} />
-                    {saved ? "Saved" : saving ? "Saving…" : "Save Changes"}
-                  </button>
+
                 </div>
-              </Card>
+
+                {/* Save button */}
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !name.trim()}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    width: "100%", marginTop: 14,
+                    padding: "11px 20px", borderRadius: 14,
+                    background: saved
+                      ? "rgba(16,185,129,0.16)"
+                      : "rgba(165,180,252,0.12)",
+                    border: saved
+                      ? "1px solid rgba(16,185,129,0.28)"
+                      : "1px solid rgba(165,180,252,0.22)",
+                    color: saved ? "#34d399" : "#a5b4fc",
+                    fontSize: 13, fontWeight: 600,
+                    cursor: saving || !name.trim() ? "default" : "pointer",
+                    opacity: saving || !name.trim() ? 0.5 : 1,
+                    transition: "background 150ms, border-color 150ms, color 150ms",
+                  }}
+                >
+                  <Save style={{ width: 13, height: 13 }} />
+                  {saved ? "Saved" : saving ? "Saving…" : "Save Changes"}
+                </button>
+
+              </div>
 
               {/* ── Export Data ─────────────────────────────────────────────────── */}
               <Card noPad>
