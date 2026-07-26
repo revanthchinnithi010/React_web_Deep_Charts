@@ -410,41 +410,42 @@ export const ProfilePage = memo(function ProfilePage({
                 gap:           16,
               }}
             >
-              {/* ── Avatar hero ─────────────────────────────────────────────── */}
+              {/* ── Avatar row ──────────────────────────────────────────────── */}
               <div style={{
-                display:        "flex",
-                flexDirection:  "column",
-                alignItems:     "center",
-                gap:            12,
-                padding:        "28px 0 8px",
+                display:     "flex",
+                alignItems:  "center",
+                gap:         16,
+                padding:     "20px 4px 8px",
               }}>
+                {/* Left: avatar */}
                 <div
-                  style={{ position: "relative", cursor: "pointer" }}
+                  style={{ position: "relative", cursor: "pointer", flexShrink: 0 }}
                   onClick={() => fileRef.current?.click()}
                 >
                   <div style={{
-                    width: 88, height: 88, borderRadius: "50%",
+                    width: 64, height: 64, borderRadius: "50%",
                     overflow: "hidden",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     background: "var(--surface-avatar-bg)",
-                    border:     "2.5px solid rgba(255,255,255,0.14)",
-                    boxShadow:  "0 8px 32px rgba(0,0,0,0.55)",
+                    border:     "2px solid rgba(255,255,255,0.14)",
+                    boxShadow:  "0 4px 20px rgba(0,0,0,0.50)",
                   }}>
                     {profile.avatarDataUrl
                       ? <img src={profile.avatarDataUrl} alt={profile.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <span style={{ fontSize: 30, fontWeight: 700, color: "var(--surface-avatar-text)", lineHeight: 1 }}>{initials}</span>
+                      : <span style={{ fontSize: 22, fontWeight: 700, color: "var(--surface-avatar-text)", lineHeight: 1 }}>{initials}</span>
                     }
                   </div>
                   <div style={{
-                    position:  "absolute", bottom: 2, right: 2,
-                    width:     28, height: 28, borderRadius: "50%",
+                    position:  "absolute", bottom: 0, right: 0,
+                    width:     22, height: 22, borderRadius: "50%",
                     background: "rgba(165,180,252,0.88)",
                     border:     "2px solid #000000",
                     display:    "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <Camera style={{ width: 13, height: 13, color: "#1e1b4b" }} />
+                    <Camera style={{ width: 10, height: 10, color: "#1e1b4b" }} />
                   </div>
                 </div>
+
                 <input
                   ref={fileRef}
                   type="file"
@@ -452,28 +453,39 @@ export const ProfilePage = memo(function ProfilePage({
                   style={{ display: "none" }}
                   onChange={handleAvatarChange}
                 />
-                <div style={{ textAlign: "center" }}>
-                  <p style={{ fontSize: 17, fontWeight: 700, color: "rgba(255,255,255,0.90)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+
+                {/* Right: name + email */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    fontSize: 18, fontWeight: 700,
+                    color: "rgba(255,255,255,0.92)",
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.2,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
                     {profile.name}
                   </p>
-                  {profile.email && (
-                    <p style={{ fontSize: 12, color: "rgba(148,163,184,0.60)", marginTop: 4 }}>
-                      {profile.email}
-                    </p>
+                  <p style={{
+                    fontSize: 13,
+                    color: "rgba(148,163,184,0.60)",
+                    marginTop: 4,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {profile.email || "No email set"}
+                  </p>
+                  {profile.avatarDataUrl && (
+                    <button
+                      onClick={() => onUpdate({ avatarDataUrl: null })}
+                      style={{
+                        fontSize: 11, color: "#f87171",
+                        background: "none", border: "none", cursor: "pointer",
+                        padding: 0, marginTop: 6,
+                      }}
+                    >
+                      Remove photo
+                    </button>
                   )}
                 </div>
-                {profile.avatarDataUrl && (
-                  <button
-                    onClick={() => onUpdate({ avatarDataUrl: null })}
-                    style={{
-                      fontSize: 11, color: "#f87171",
-                      background: "none", border: "none", cursor: "pointer",
-                      padding: "2px 8px",
-                    }}
-                  >
-                    Remove photo
-                  </button>
-                )}
               </div>
 
               {/* ── Personal Info ──────────────────────────────────────────────── */}
