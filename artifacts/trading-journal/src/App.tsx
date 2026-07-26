@@ -12,7 +12,6 @@ import { LiveMarketProvider } from "@/contexts/LiveMarketContext";
 import { WatchlistProvider } from "@/contexts/WatchlistContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { motion, AnimatePresence } from "motion/react";
-import { consumeHeroRect } from "@/lib/heroTransition";
 import { PageTransition } from "@/components/animations/PageTransition";
 import { SplashScreen } from "@/components/animations/SplashScreen";
 import { getSymbolBreakdown, getGetSymbolBreakdownQueryKey } from "@workspace/api-client-react";
@@ -339,62 +338,73 @@ const KNOWN_PATHS = new Set([
  */
 const TAB_ORDER: string[] = ["/", "/markets", "/charts", "/trades", "/alerts"];
 
-/** Wraps PositionDetail in a clip-path expand animation originating from the
- *  tapped position row.  Falls back to the standard CSS entrance when no hero
- *  rect has been stored (direct URL load, keyboard navigation, reduced motion). */
+/**
+ * PositionDetailWrapper — GPU compositor-thread slide-up entrance.
+ *
+ * WHY NOT CLIP-PATH + FRAMER MOTION (previous approach):
+ *   clip-path forces software rasterization on every frame — not composited.
+ *   Framer Motion's animate() is JS-driven (RAF callbacks on the main thread),
+ *   so the chart tick engine can block it mid-animation, causing visible stutter.
+ *
+ * THIS APPROACH:
+ *   Pure CSS transition on `opacity` + `transform` only — both run on the GPU
+ *   compositor thread, completely independent of JavaScript.
+ *   The same setTimeout(0)+RAF pattern used by ProfilePage / sub-pages ensures
+ *   the browser paints the closed state (translateY+scale+opacity:0) before the
+ *   transition target is applied — guaranteeing the animation fires every tap.
+ *
+ *   Enter: translateY(56px) scale(0.97) opacity(0) → identity
+ *          340ms cubic-bezier(0.22,1,0.36,1) [transform] · 240ms [opacity]
+ *
+ *   zIndex 55 — above Portfolio/Balances/NetPnl cover-detail pages (50).
+ *   A solid backdrop div at zIndex 54 covers those pages from frame 0 so
+ *   nothing below bleeds through during the opacity ramp.
+ */
 function PositionDetailWrapper() {
-  // consumeHeroRect reads once and clears — safe inside a useState initializer
-  const [heroRect] = useState(() => consumeHeroRect("position-detail"));
+  const [visible, setVisible] = useState(false);
   const prefersReduced =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // zIndex 55 — above Portfolio/Balances/NetPnl cover-detail pages (50) so
-  // the backdrop covers them from frame 0, preventing Portfolio fade-through.
-  const ZINDEX = 55;
+  useEffect(() => {
+    if (prefersReduced) { setVisible(true); return; }
+    // setTimeout(0) pushes past React's commit + pending microtasks so the
+    // browser paints frame 0 (closed state) before we flip to the open state.
+    // The single RAF then synchronises with the next paint cycle.
+    let rafId: number;
+    const timerId = setTimeout(() => {
+      rafId = requestAnimationFrame(() => setVisible(true));
+    }, 0);
+    return () => { clearTimeout(timerId); cancelAnimationFrame(rafId); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!heroRect || prefersReduced) {
-    return (
-      <div className="cover-page-enter" style={{ position: "fixed", inset: 0, zIndex: ZINDEX, background: "var(--background)" }}>
-        <PositionDetail />
-      </div>
-    );
-  }
-
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  // inset(top right bottom left round radius) — starts clipped to the row rect
-  const clipFrom = `inset(${heroRect.top}px ${vw - heroRect.right}px ${vh - heroRect.bottom}px ${heroRect.left}px round 18px)`;
-
-  // Two-layer approach:
-  //  1. Opaque backdrop at ZINDEX — covers Portfolio and Layout instantly at
-  //     frame 0. clip-path on the outer div would make this transparent outside
-  //     the row rect, exposing the fading Portfolio behind it (the flicker).
-  //  2. Clipped content div at ZINDEX+1 — clip-path expands from the row rect.
-  //     Outside the clip the backdrop (layer 1) fills the screen — not the
-  //     Portfolio, not the Layout — so there is nothing to flicker.
   return (
     <>
-      <div style={{ position: "fixed", inset: 0, zIndex: ZINDEX,     background: "var(--background)" }} />
-      <motion.div
+      {/* Solid backdrop — covers Portfolio / Balances / any z:50 layer
+          from the very first frame so nothing bleeds through the opacity ramp */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 54, background: "#000000" }} />
+
+      {/* Animated panel — opacity + transform only (compositor thread) */}
+      <div
         style={{
-          position: "fixed", inset: 0, zIndex: ZINDEX + 1,
-          background: "var(--background)",
-          // clipPath set here (React style prop) so it is applied in the DOM
-          // commit phase — before any effects, before any browser paint.
-          // Without this, Framer Motion only sets clipPath in its own
-          // useLayoutEffect/useEffect, which runs after React's commit. On the
-          // second+ open PositionDetail is already loaded (no Suspense delay),
-          // so the motion.div commits immediately and the browser can paint one
-          // frame with no clipPath (full-screen flash) before FM's effect fires.
-          clipPath: clipFrom,
+          position:                 "fixed",
+          inset:                    0,
+          zIndex:                   55,
+          background:               "#000000",
+          opacity:                  visible ? 1 : 0,
+          transform:                visible
+            ? "translate3d(0,0,0) scale(1)"
+            : "translate3d(0,56px,0) scale(0.97)",
+          transition:               visible
+            ? "opacity 0.24s cubic-bezier(0.22,1,0.36,1), transform 0.34s cubic-bezier(0.22,1,0.36,1)"
+            : "none",
+          willChange:               "transform, opacity",
+          backfaceVisibility:       "hidden",
+          WebkitBackfaceVisibility: "hidden",
         }}
-        initial={{ clipPath: clipFrom }}
-        animate={{ clipPath: "inset(0px round 0px)" }}
-        transition={{ duration: 0.23, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         <PositionDetail />
-      </motion.div>
+      </div>
     </>
   );
 }
