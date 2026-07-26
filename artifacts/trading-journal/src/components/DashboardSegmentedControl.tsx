@@ -90,11 +90,16 @@ const DashboardSegmentedControl = memo(function DashboardSegmentedControl() {
             type="button"
             role="tab"
             aria-selected={selected}
-            onClick={() => {
+            onPointerDown={(e) => {
+              // onPointerDown fires instantly on touch — no 300ms tap-delay.
+              // onClick waits for the browser's double-tap detection window
+              // (~300ms on mobile) before dispatching, which is exactly the
+              // "slow" feeling on Reports → Dashboard switches.
+              e.preventDefault();
               if (tab.href !== pathname) navigate(tab.href);
             }}
             className={`relative z-10 flex items-center justify-center text-[14px] font-semibold transition-[color,background,transform] duration-150 ease-out active:scale-[0.96] rounded-[9px] w-full h-full ${selected ? "dash-segment-btn-active" : "dash-segment-btn-idle"}`}
-            style={{ color: selected ? "#FFFFFF" : "#6E7578", willChange: "transform" }}
+            style={{ color: selected ? "#FFFFFF" : "#6E7578", willChange: "transform", touchAction: "manipulation" }}
           >
             {/* Plain CSS transitions, not per-frame JS-driven ones — `color`
                 isn't GPU-compositable, so animating it through Motion.dev
