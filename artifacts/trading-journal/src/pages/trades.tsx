@@ -988,372 +988,428 @@ export default function Trades() {
         </div>{/* /inner padding div */}
       </div>{/* /scroll container */}
 
-      {/* ── Framer Motion Log Trade Modal ── */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            variants={modalOverlayVariants}
-            initial="hidden"
-            animate="show"
-            exit="exit"
+      {/* ── Log Trade Bottom Sheet ── */}
+      {createPortal(
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsModalOpen(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 500,
+              background: "rgba(0,0,0,0.72)",
+              opacity: isModalOpen ? 1 : 0,
+              pointerEvents: isModalOpen ? "auto" : "none",
+              transition: "opacity 0.28s ease",
+            }}
+          />
+
+          {/* Sheet */}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 501,
+              background: "#0d0f13",
+              borderTop: "1px solid rgba(255,255,255,0.09)",
+              borderRadius: "20px 20px 0 0",
+              boxShadow: "0 -16px 64px rgba(0,0,0,0.85)",
+              maxHeight: "92dvh",
+              display: "flex", flexDirection: "column",
+              transform: isModalOpen ? "translateY(0)" : "translateY(100%)",
+              transition: "transform 0.32s cubic-bezier(0.32,0.72,0,1)",
+              willChange: "transform",
+              visibility: isModalOpen ? "visible" : "hidden",
+              paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0px)",
+            }}
           >
-            {/* Backdrop */}
-            <motion.div
-              className="absolute inset-0 bg-black/65 backdrop-blur-sm"
-              onClick={() => setIsModalOpen(false)}
-            />
+            {/* Handle pill */}
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4, flexShrink: 0 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 9999, background: "rgba(255,255,255,0.18)" }} />
+            </div>
 
-            {/* Modal Content */}
-            <motion.div
-              className="glass-modal relative w-full max-w-[680px] max-h-[90vh] flex flex-col z-10"
-              variants={modalContentVariants}
-              initial="hidden"
-              animate="show"
-              exit="exit"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/[0.08]">
-                <div>
-                  <h2 className="text-lg font-black text-white tracking-tight">Log New Trade</h2>
-                  <p className="text-[12px] text-muted-foreground mt-0.5">Record your trade details and analysis</p>
-                </div>
-                <AnimatedIconButton
-                  onClick={() => setIsModalOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl text-muted-foreground hover:text-white hover:bg-white/[0.07] transition-all"
+            {/* Header */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "6px 18px 14px",
+              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              flexShrink: 0,
+            }}>
+              <div>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", letterSpacing: "-0.01em", margin: 0 }}>Log New Trade</p>
+                <p style={{ fontSize: 12, color: "rgba(148,163,184,0.55)", margin: "2px 0 0" }}>Record your trade details and analysis</p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                style={{
+                  background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)",
+                  borderRadius: 8, padding: "6px 8px", cursor: "pointer", lineHeight: 0,
+                  color: "rgba(148,163,184,0.55)",
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: "flex", gap: 6, padding: "14px 18px 0", flexShrink: 0 }}>
+              {(["details", "analysis"] as ModalTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setModalTab(tab)}
+                  style={{
+                    position: "relative",
+                    padding: "7px 16px",
+                    borderRadius: 12,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    border: modalTab === tab ? "1px solid rgba(var(--primary-rgb,99,102,241),0.25)" : "1px solid transparent",
+                    background: modalTab === tab ? "rgba(var(--primary-rgb,99,102,241),0.12)" : "transparent",
+                    color: modalTab === tab ? "hsl(var(--primary))" : "rgba(148,163,184,0.7)",
+                    transition: "all 0.15s",
+                  }}
                 >
-                  <X className="w-4 h-4" />
-                </AnimatedIconButton>
-              </div>
+                  {tab === "details" ? "Trade Details" : "Analysis & Tags"}
+                </button>
+              ))}
+            </div>
 
-              {/* Tabs */}
-              <div className="flex gap-1 px-6 pt-4">
-                {(["details", "analysis"] as ModalTab[]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setModalTab(tab)}
-                    className={`relative px-4 py-2 rounded-xl text-[12px] font-semibold transition-all ${
-                      modalTab === tab
-                        ? "bg-primary/15 text-primary"
-                        : "text-muted-foreground hover:text-white hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    {tab === "details" ? "Trade Details" : "Analysis & Tags"}
-                    {modalTab === tab && (
-                      <motion.div layoutId="modalTabIndicator" className="absolute inset-0 rounded-xl border border-primary/25" style={{ zIndex: -1 }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Scrollable Form Body */}
-              <div className="flex-1 overflow-y-auto px-6 py-5">
-                <Form {...form}>
-                  <form id="tradeForm" onSubmit={form.handleSubmit(onSubmit)}>
-                    <AnimatePresence mode="wait">
-                      {modalTab === "details" && (
-                        <motion.div
-                          key="details"
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{ duration: 0.18 }}
-                          className="space-y-4"
-                        >
-                          {/* Symbol + Side + Broker preview */}
-                          <div className="grid grid-cols-3 gap-3">
-                            <FormField control={form.control} name="symbol" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Asset</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className={inputCls}>
-                                      <SelectValue placeholder="Select asset" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent className="border-0 rounded-xl" style={{ background: "hsl(var(--card))", border: "1px solid var(--surface-btn-border)" }}>
-                                    {ALL_SYMBOLS.map(sym => (
-                                      <SelectItem key={sym} value={sym} className="text-[13px]">{sym}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="side" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Direction</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className={inputCls}>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent className="border-0 rounded-xl" style={{ background: "hsl(var(--card))", border: "1px solid var(--surface-btn-border)" }}>
-                                    <SelectItem value="long" className="text-[13px]">Long (Buy)</SelectItem>
-                                    <SelectItem value="short" className="text-[13px]">Short (Sell)</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <div>
-                              <p className={`${labelCls} mb-1.5`}>Broker</p>
-                              <div className={`${inputCls} flex items-center gap-2 px-3 border`}>
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${
-                                  BROKER_MAP[watchedSymbol] === "Delta Exchange" ? "bg-orange-400" :
-                                  BROKER_MAP[watchedSymbol] === "FusionMarkets" ? "bg-blue-400" :
-                                  BROKER_MAP[watchedSymbol] === "Groww" ? "bg-teal-400" :
-                                  "bg-muted-foreground/40"
-                                }`} />
-                                <span className="text-[13px] text-muted-foreground truncate">
-                                  {BROKER_MAP[watchedSymbol] || "Auto-detected"}
-                                </span>
-                              </div>
+            {/* Scrollable Form Body */}
+            <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "18px 18px 8px", WebkitOverflowScrolling: "touch" as any }}>
+              <Form {...form}>
+                <form id="tradeForm" onSubmit={form.handleSubmit(onSubmit)}>
+                  <AnimatePresence mode="wait">
+                    {modalTab === "details" && (
+                      <motion.div
+                        key="details"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.18 }}
+                        className="space-y-4"
+                      >
+                        {/* Symbol + Side + Broker preview */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <FormField control={form.control} name="symbol" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className={labelCls}>Asset</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className={inputCls}>
+                                    <SelectValue placeholder="Select asset" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="border-0 rounded-xl" style={{ background: "hsl(var(--card))", border: "1px solid var(--surface-btn-border)" }}>
+                                  {ALL_SYMBOLS.map(sym => (
+                                    <SelectItem key={sym} value={sym} className="text-[13px]">{sym}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={form.control} name="side" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className={labelCls}>Direction</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className={inputCls}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent className="border-0 rounded-xl" style={{ background: "hsl(var(--card))", border: "1px solid var(--surface-btn-border)" }}>
+                                  <SelectItem value="long" className="text-[13px]">Long (Buy)</SelectItem>
+                                  <SelectItem value="short" className="text-[13px]">Short (Sell)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <div>
+                            <p className={`${labelCls} mb-1.5`}>Broker</p>
+                            <div className={`${inputCls} flex items-center gap-2 px-3 border`}>
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${
+                                BROKER_MAP[watchedSymbol] === "Delta Exchange" ? "bg-orange-400" :
+                                BROKER_MAP[watchedSymbol] === "FusionMarkets" ? "bg-blue-400" :
+                                BROKER_MAP[watchedSymbol] === "Groww" ? "bg-teal-400" :
+                                "bg-muted-foreground/40"
+                              }`} />
+                              <span className="text-[13px] text-muted-foreground truncate">
+                                {BROKER_MAP[watchedSymbol] || "Auto-detected"}
+                              </span>
                             </div>
                           </div>
+                        </div>
 
-                          {/* Source Badge */}
-                          <div className="flex items-center gap-2 py-2 px-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                            <span className="text-[11px] text-muted-foreground font-medium">Source:</span>
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/[0.09] text-[11px] font-bold text-white/80">
-                              <FileText className="w-3 h-3 text-muted-foreground" />
-                              Manual Entry
-                            </span>
-                            <span className="ml-auto text-[10px] text-muted-foreground/60">Sync source: Manual</span>
-                          </div>
+                        {/* Source Badge */}
+                        <div className="flex items-center gap-2 py-2 px-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                          <span className="text-[11px] text-muted-foreground font-medium">Source:</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/[0.09] text-[11px] font-bold text-white/80">
+                            <FileText className="w-3 h-3 text-muted-foreground" />
+                            Manual Entry
+                          </span>
+                          <span className="ml-auto text-[10px] text-muted-foreground/60">Sync source: Manual</span>
+                        </div>
 
-                          {/* Entry / Exit / Qty */}
-                          <div className="grid grid-cols-3 gap-3">
-                            <FormField control={form.control} name="entryPrice" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Entry Price</FormLabel>
-                                <FormControl><Input type="number" step="0.0001" {...field} className={inputCls} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="exitPrice" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Exit Price</FormLabel>
-                                <FormControl><Input type="number" step="0.0001" {...field} className={inputCls} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="quantity" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Qty / Lots</FormLabel>
-                                <FormControl><Input type="number" step="0.01" {...field} className={inputCls} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-
-                          {/* SL / TP */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <FormField control={form.control} name="stopLoss" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Stop Loss</FormLabel>
-                                <FormControl><Input type="number" step="0.0001" placeholder="Optional" {...field} value={field.value ?? ""} className={inputCls} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="takeProfit" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Take Profit</FormLabel>
-                                <FormControl><Input type="number" step="0.0001" placeholder="Optional" {...field} value={field.value ?? ""} className={inputCls} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-
-                          {/* Dates */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <FormField control={form.control} name="entryDate" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Entry Date & Time</FormLabel>
-                                <FormControl><Input type="datetime-local" {...field} className={inputCls} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="exitDate" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className={labelCls}>Exit Date & Time</FormLabel>
-                                <FormControl><Input type="datetime-local" {...field} className={inputCls} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {modalTab === "analysis" && (
-                        <motion.div
-                          key="analysis"
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{ duration: 0.18 }}
-                          className="space-y-5"
-                        >
-                          {/* TradingView Link */}
-                          <FormField control={form.control} name="tvLink" render={({ field }) => (
+                        {/* Entry / Exit / Qty */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <FormField control={form.control} name="entryPrice" render={({ field }) => (
                             <FormItem>
-                              <FormLabel className={labelCls + " flex items-center gap-1.5"}>
-                                <LinkIcon className="w-3 h-3" /> TradingView Chart Link
-                              </FormLabel>
-                              <div className="relative">
-                                <TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary/60" />
-                                <FormControl>
-                                  <Input
-                                    placeholder="https://www.tradingview.com/chart/..."
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    className={`${inputCls} pl-9`}
-                                  />
-                                </FormControl>
-                              </div>
+                              <FormLabel className={labelCls}>Entry Price</FormLabel>
+                              <FormControl><Input type="number" step="0.0001" {...field} className={inputCls} /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )} />
-
-                          {/* Screenshot */}
-                          <FormField control={form.control} name="screenshot" render={({ field }) => (
+                          <FormField control={form.control} name="exitPrice" render={({ field }) => (
                             <FormItem>
-                              <FormLabel className={labelCls + " flex items-center gap-1.5"}>
-                                <ImageIcon className="w-3 h-3" /> Screenshot URL
-                              </FormLabel>
-                              <div className="relative">
-                                <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
-                                <FormControl>
-                                  <Input
-                                    placeholder="https://..."
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    className={`${inputCls} pl-9`}
-                                  />
-                                </FormControl>
-                              </div>
-                              {screenshotUrl && (
-                                <div className="mt-2 rounded-xl overflow-hidden border border-white/[0.08] aspect-video max-h-36">
-                                  <img
-                                    src={screenshotUrl}
-                                    alt="Preview"
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => (e.currentTarget.style.display = "none")}
-                                  />
-                                </div>
-                              )}
+                              <FormLabel className={labelCls}>Exit Price</FormLabel>
+                              <FormControl><Input type="number" step="0.0001" {...field} className={inputCls} /></FormControl>
                               <FormMessage />
                             </FormItem>
                           )} />
-
-                          {/* Setup Tags */}
-                          <FormField control={form.control} name="setupTags" render={({ field }) => (
+                          <FormField control={form.control} name="quantity" render={({ field }) => (
                             <FormItem>
-                              <FormLabel className={labelCls + " flex items-center gap-1.5"}>
-                                <Tag className="w-3 h-3" /> Setup Tags
-                              </FormLabel>
+                              <FormLabel className={labelCls}>Qty / Lots</FormLabel>
+                              <FormControl><Input type="number" step="0.01" {...field} className={inputCls} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
+
+                        {/* SL / TP */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField control={form.control} name="stopLoss" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className={labelCls}>Stop Loss</FormLabel>
+                              <FormControl><Input type="number" step="0.0001" placeholder="Optional" {...field} value={field.value ?? ""} className={inputCls} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={form.control} name="takeProfit" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className={labelCls}>Take Profit</FormLabel>
+                              <FormControl><Input type="number" step="0.0001" placeholder="Optional" {...field} value={field.value ?? ""} className={inputCls} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
+
+                        {/* Dates */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField control={form.control} name="entryDate" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className={labelCls}>Entry Date & Time</FormLabel>
+                              <FormControl><Input type="datetime-local" {...field} className={inputCls} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={form.control} name="exitDate" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className={labelCls}>Exit Date & Time</FormLabel>
+                              <FormControl><Input type="datetime-local" {...field} className={inputCls} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {modalTab === "analysis" && (
+                      <motion.div
+                        key="analysis"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.18 }}
+                        className="space-y-5"
+                      >
+                        {/* TradingView Link */}
+                        <FormField control={form.control} name="tvLink" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className={labelCls + " flex items-center gap-1.5"}>
+                              <LinkIcon className="w-3 h-3" /> TradingView Chart Link
+                            </FormLabel>
+                            <div className="relative">
+                              <TrendingUp className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary/60" />
                               <FormControl>
-                                <MultiSelectChips
-                                  options={SETUP_TAG_OPTIONS}
-                                  value={setupTagsVal}
-                                  onChange={field.onChange}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-
-                          {/* Mistake Tags */}
-                          <FormField control={form.control} name="mistakeTags" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className={labelCls + " flex items-center gap-1.5"}>
-                                <AlertTriangle className="w-3 h-3 text-red-400/70" /> Mistake Tags
-                              </FormLabel>
-                              <FormControl>
-                                <MultiSelectChips
-                                  options={MISTAKE_TAG_OPTIONS}
-                                  value={mistakeTagsVal}
-                                  onChange={field.onChange}
-                                  activeClass="bg-red-500/15 text-red-400 border-red-500/30"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-
-                          {/* Notes */}
-                          <FormField control={form.control} name="notes" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className={labelCls + " flex items-center gap-1.5"}>
-                                <FileText className="w-3 h-3" /> Journal Notes
-                              </FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="What was your thesis? How did the trade go?"
+                                <Input
+                                  placeholder="https://www.tradingview.com/chart/..."
                                   {...field}
                                   value={field.value ?? ""}
-                                  rows={4}
-                                  className="bg-white/[0.04] border-white/[0.09] rounded-xl text-[13px] focus:border-primary/50 focus:ring-0 resize-none placeholder:text-muted-foreground/40"
+                                  className={`${inputCls} pl-9`}
                                 />
                               </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </form>
-                </Form>
-              </div>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
 
-              {/* Modal Footer */}
-              <div className="px-6 pb-5 pt-4 border-t border-white/[0.08] flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold ${
-                    watchedSide === "long" ? "bg-blue-500/10 text-blue-400" : "bg-orange-500/10 text-orange-400"
-                  }`}>
-                    {watchedSide?.toUpperCase()}
+                        {/* Screenshot */}
+                        <FormField control={form.control} name="screenshot" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className={labelCls + " flex items-center gap-1.5"}>
+                              <ImageIcon className="w-3 h-3" /> Screenshot URL
+                            </FormLabel>
+                            <div className="relative">
+                              <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+                              <FormControl>
+                                <Input
+                                  placeholder="https://..."
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  className={`${inputCls} pl-9`}
+                                />
+                              </FormControl>
+                            </div>
+                            {screenshotUrl && (
+                              <div className="mt-2 rounded-xl overflow-hidden border border-white/[0.08] aspect-video max-h-36">
+                                <img
+                                  src={screenshotUrl}
+                                  alt="Preview"
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => (e.currentTarget.style.display = "none")}
+                                />
+                              </div>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+
+                        {/* Setup Tags */}
+                        <FormField control={form.control} name="setupTags" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className={labelCls + " flex items-center gap-1.5"}>
+                              <Tag className="w-3 h-3" /> Setup Tags
+                            </FormLabel>
+                            <FormControl>
+                              <MultiSelectChips
+                                options={SETUP_TAG_OPTIONS}
+                                value={setupTagsVal}
+                                onChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+
+                        {/* Mistake Tags */}
+                        <FormField control={form.control} name="mistakeTags" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className={labelCls + " flex items-center gap-1.5"}>
+                              <AlertTriangle className="w-3 h-3 text-red-400/70" /> Mistake Tags
+                            </FormLabel>
+                            <FormControl>
+                              <MultiSelectChips
+                                options={MISTAKE_TAG_OPTIONS}
+                                value={mistakeTagsVal}
+                                onChange={field.onChange}
+                                activeClass="bg-red-500/15 text-red-400 border-red-500/30"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+
+                        {/* Notes */}
+                        <FormField control={form.control} name="notes" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className={labelCls + " flex items-center gap-1.5"}>
+                              <FileText className="w-3 h-3" /> Journal Notes
+                            </FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="What was your thesis? How did the trade go?"
+                                {...field}
+                                value={field.value ?? ""}
+                                rows={4}
+                                className="bg-white/[0.04] border-white/[0.09] rounded-xl text-[13px] focus:border-primary/50 focus:ring-0 resize-none placeholder:text-muted-foreground/40"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </form>
+              </Form>
+            </div>
+
+            {/* Pinned Footer */}
+            <div style={{
+              flexShrink: 0,
+              padding: "14px 18px",
+              borderTop: "1px solid rgba(255,255,255,0.06)",
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center",
+                  padding: "3px 10px", borderRadius: 8,
+                  fontSize: 11, fontWeight: 700,
+                  background: watchedSide === "long" ? "rgba(96,165,250,0.12)" : "rgba(249,115,22,0.12)",
+                  color: watchedSide === "long" ? "#60a5fa" : "#f97316",
+                }}>
+                  {watchedSide?.toUpperCase()}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>{watchedSymbol}</span>
+                {modalTab === "analysis" && (setupTagsVal || mistakeTagsVal) && (
+                  <span style={{ fontSize: 11, color: "rgba(148,163,184,0.55)" }}>
+                    · {setupTagsVal.split(",").filter(Boolean).length + mistakeTagsVal.split(",").filter(Boolean).length} tag{setupTagsVal.split(",").filter(Boolean).length + mistakeTagsVal.split(",").filter(Boolean).length !== 1 ? "s" : ""}
                   </span>
-                  <span className="text-[13px] font-bold text-white">{watchedSymbol}</span>
-                  {modalTab === "analysis" && (setupTagsVal || mistakeTagsVal) && (
-                    <span className="text-[11px] text-muted-foreground">
-                      · {setupTagsVal.split(",").filter(Boolean).length + mistakeTagsVal.split(",").filter(Boolean).length} tag{setupTagsVal.split(",").filter(Boolean).length + mistakeTagsVal.split(",").filter(Boolean).length !== 1 ? "s" : ""}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {modalTab === "details" ? (
-                    <button
-                      type="button"
-                      onClick={() => setModalTab("analysis")}
-                      className="px-4 h-9 rounded-xl border border-white/[0.1] bg-white/[0.04] text-[13px] font-semibold text-muted-foreground hover:text-white hover:bg-white/[0.08] transition-all"
-                    >
-                      Next: Analysis
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setModalTab("details")}
-                      className="px-4 h-9 rounded-xl border border-white/[0.1] bg-white/[0.04] text-[13px] font-semibold text-muted-foreground hover:text-white hover:bg-white/[0.08] transition-all"
-                    >
-                      Back
-                    </button>
-                  )}
-                  <button
-                    type="submit"
-                    form="tradeForm"
-                    disabled={createTrade.isPending}
-                    className="px-5 h-9 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/85 active:scale-[0.98] transition-all shadow-md shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {createTrade.isPending ? "Saving..." : "Save Trade"}
-                  </button>
-                </div>
+                )}
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {modalTab === "details" ? (
+                  <button
+                    type="button"
+                    onClick={() => setModalTab("analysis")}
+                    style={{
+                      padding: "0 16px", height: 40, borderRadius: 12,
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      color: "rgba(148,163,184,0.8)", fontSize: 13, fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Next: Analysis
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setModalTab("details")}
+                    style={{
+                      padding: "0 16px", height: 40, borderRadius: 12,
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      color: "rgba(148,163,184,0.8)", fontSize: 13, fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Back
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  form="tradeForm"
+                  disabled={createTrade.isPending}
+                  style={{
+                    padding: "0 20px", height: 40, borderRadius: 12,
+                    background: "linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(220,228,255,0.92) 50%, rgba(255,255,255,0.88) 100%)",
+                    border: "1.5px solid rgba(255,255,255,0.85)",
+                    color: "#0a0a0f", fontSize: 13.5, fontWeight: 700,
+                    boxShadow: "0 2px 12px rgba(255,255,255,0.18), inset 0 1px 0 rgba(255,255,255,1)",
+                    cursor: createTrade.isPending ? "not-allowed" : "pointer",
+                    opacity: createTrade.isPending ? 0.5 : 1,
+                  }}
+                >
+                  {createTrade.isPending ? "Saving..." : "Save Trade"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
 
       {/* ── Trade Detail Drawer ── */}
       <Sheet open={!!selectedTradeId} onOpenChange={(open) => !open && setSelectedTradeId(null)}>
