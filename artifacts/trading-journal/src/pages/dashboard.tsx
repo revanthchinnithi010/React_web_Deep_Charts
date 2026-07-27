@@ -39,6 +39,14 @@ const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
 const DUR_OPEN   = 320;
 const DUR_CLOSE  = 240;
 
+type DashTrade = {
+  id: number; symbol: string; side: string; pnl?: number | null;
+  entryPrice?: number | null; exitPrice?: number | null; quantity: number;
+  riskRewardRatio?: number | null; stopLoss?: number | null; takeProfit?: number | null;
+  entryDate: string; tvLink?: string | null; screenshot?: string | null;
+  setupTags?: string | null; mistakeTags?: string | null; notes?: string | null;
+};
+
 const DayDetailSheet = memo(function DayDetailSheet({
   date, open, onClose,
 }: {
@@ -51,10 +59,10 @@ const DayDetailSheet = memo(function DayDetailSheet({
     { date, limit: 100 },
     { query: { enabled: open && !!date } },
   );
-  const dayTrades = data?.trades ?? [];
-  const wins      = dayTrades.filter(t => (t.pnl ?? 0) > 0).length;
-  const losses    = dayTrades.filter(t => (t.pnl ?? 0) < 0).length;
-  const dailyPnl  = dayTrades.reduce((sum, t) => sum + (t.pnl ?? 0), 0);
+  const dayTrades = (data?.trades ?? []) as DashTrade[];
+  const wins      = dayTrades.filter((t: DashTrade) => (t.pnl ?? 0) > 0).length;
+  const losses    = dayTrades.filter((t: DashTrade) => (t.pnl ?? 0) < 0).length;
+  const dailyPnl  = dayTrades.reduce((sum: number, t: DashTrade) => sum + (t.pnl ?? 0), 0);
 
   const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
   const selectedTrade = selectedTradeId != null
@@ -76,10 +84,10 @@ const DayDetailSheet = memo(function DayDetailSheet({
       let raf: number;
       const t = setTimeout(() => { raf = requestAnimationFrame(() => setVisible(true)); }, 0);
       return () => { clearTimeout(t); cancelAnimationFrame(raf); };
-    } else {
-      setVisible(false);
-      setSelectedTradeId(null);
     }
+    setVisible(false);
+    setSelectedTradeId(null);
+    return undefined;
   }, [open]);
 
   /* Body scroll-lock */
@@ -629,11 +637,6 @@ const Dashboard = memo(function Dashboard() {
     openSheet(true);
   }, [openSheet]);
 
-  const selectedDayData = useMemo(() => {
-    if (!selectedDate || !calData) return null;
-    return calData.find(d => d.date === selectedDate) ?? null;
-  }, [selectedDate, calData]);
-
   const isStillLoading = !timedOut && tradesLoading;
 
   const openPositionsCount = useBrokerStore(s =>
@@ -702,7 +705,6 @@ const Dashboard = memo(function Dashboard() {
       {/* ── Day Detail Sheet ── */}
       <DayDetailSheet
         date={selectedDate}
-        dayData={selectedDayData}
         open={sheetOpen}
         onClose={() => openSheet(false)}
       />

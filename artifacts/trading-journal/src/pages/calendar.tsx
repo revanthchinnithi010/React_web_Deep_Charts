@@ -400,16 +400,18 @@ const TradeDetailSheet = memo(function TradeDetailSheet({ trade, onClose, fc }: 
               {/* Metrics grid */}
               <div className="grid grid-cols-2 gap-2.5">
                 {[
+                  { label: "Date",         value: new Date(trade.entryDate).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) },
+                  { label: trade.pnl >= 0 ? "Profit" : "Loss", value: (trade.pnl >= 0 ? "+" : "") + fc(trade.pnl), color: trade.pnl >= 0 ? "#34d399" : "#f87171" },
                   { label: "Entry",        value: fc(trade.entryPrice) },
                   { label: "Exit",         value: trade.exitPrice == null ? "—" : fc(trade.exitPrice) },
                   { label: "Risk / Reward", value: trade.riskRewardRatio ? `${trade.riskRewardRatio.toFixed(2)}R` : "—" },
                   { label: "Quantity",     value: String(trade.quantity) },
                   { label: "Stop Loss",    value: trade.stopLoss ? fc(trade.stopLoss) : "—" },
                   { label: "Take Profit",  value: trade.takeProfit ? fc(trade.takeProfit) : "—" },
-                ].map(({ label, value }) => (
+                ].map(({ label, value, color }) => (
                   <div key={label} className="p-3 rounded-xl border" style={{ background: "#111111", borderColor: "rgba(255,255,255,0.09)" }}>
                     <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1">{label}</p>
-                    <p className="text-[14px] font-bold font-mono text-white leading-tight">{value}</p>
+                    <p className="text-[14px] font-bold font-mono leading-tight" style={{ color: color ?? "#ffffff" }}>{value}</p>
                   </div>
                 ))}
               </div>
