@@ -654,6 +654,7 @@ const AddTradeSheet = memo(function AddTradeSheet({
           backfaceVisibility:       "hidden",
           WebkitBackfaceVisibility: "hidden",
           pointerEvents: open ? "auto" : "none",
+          paddingTop: "env(safe-area-inset-top, 0px)",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
@@ -661,7 +662,6 @@ const AddTradeSheet = memo(function AddTradeSheet({
         <div style={{
           display: "flex", alignItems: "center",
           height: 56,
-          paddingTop: "env(safe-area-inset-top, 0px)",
           paddingLeft: 8, paddingRight: 16,
           borderBottom: "1px solid rgba(255,255,255,0.06)",
           flexShrink: 0,
