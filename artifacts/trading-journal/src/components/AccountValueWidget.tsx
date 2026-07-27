@@ -197,22 +197,6 @@ export default function AccountValueWidget({
         </div>
       </div>
 
-      {/* ── Alert button ── */}
-      <div className="px-3 pb-3">
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          transition={{ duration: 0.09, ease: "easeOut" }}
-          onClick={() => navigate("/alerts")}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.09)",
-          }}
-        >
-          <AlertIcon size={18} />
-          <span className="text-[13px] font-semibold" style={{ color: "var(--stat-sub)" }}>Alerts</span>
-        </motion.button>
-      </div>
     </div>
   );
 }
