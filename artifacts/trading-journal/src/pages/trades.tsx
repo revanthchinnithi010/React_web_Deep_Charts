@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, memo } from "react";
+import { useState, useMemo, useEffect, useRef, memo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   useListTrades,
@@ -410,8 +410,7 @@ function FilterBottomSheet({
           transform: open ? "translateY(0)" : "translateY(100%)",
           transition: "transform 0.32s cubic-bezier(0.32,0.72,0,1)",
           willChange: "transform",
-          // Keep it in the a11y tree only when open
-          visibility: open ? "visible" : "hidden",
+          pointerEvents: open ? "auto" : "none",
         }}
       >
             {/* Handle pill */}
@@ -660,7 +659,7 @@ const AddTradeSheet = memo(function AddTradeSheet({
           transform: open ? "translateY(0)" : "translateY(100%)",
           transition: "transform 0.32s cubic-bezier(0.32,0.72,0,1)",
           willChange: "transform",
-          visibility: open ? "visible" : "hidden",
+          pointerEvents: open ? "auto" : "none",
           paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0px)",
         }}
       >
@@ -1057,11 +1056,12 @@ export default function Trades() {
     }
   });
 
-  const onSubmit = (data: TradeFormValues) => {
+  const onSubmit = useCallback((data: TradeFormValues) => {
     createTrade.mutate({ data });
-  };
+  }, [createTrade]);
 
-  const openModal = () => setIsModalOpen(true);
+  const openModal  = useCallback(() => setIsModalOpen(true), []);
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
 
   const selectedTrade = tradesResponse?.trades.find(t => t.id === selectedTradeId);
 
@@ -1354,7 +1354,7 @@ export default function Trades() {
       {/* ── Add Trade Bottom Sheet ── */}
       <AddTradeSheet
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={closeModal}
         form={form}
         onSubmit={onSubmit}
         isPending={createTrade.isPending}
