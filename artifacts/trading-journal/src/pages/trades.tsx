@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { DayPicker, type DateRange } from "react-day-picker";
 import { createPortal } from "react-dom";
 import {
   useListTrades,
@@ -343,53 +344,71 @@ function FilterBottomSheet({
 
               {/* Date Range */}
               <div>
-                <SectionLabel>Range</SectionLabel>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontSize: 10, color: "rgba(148,163,184,0.45)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>From</span>
-                    <input
-                      type="date"
-                      value={draftDateFrom}
-                      onChange={e => setDraftDateFrom(e.target.value)}
-                      style={{
-                        width: "100%",
-                        height: 40,
-                        borderRadius: 10,
-                        background: "rgba(255,255,255,0.04)",
-                        border: draftDateFrom ? "1.5px solid rgba(255,255,255,0.30)" : "1px solid rgba(255,255,255,0.09)",
-                        color: draftDateFrom ? "#f1f5f9" : "rgba(148,163,184,0.5)",
-                        fontSize: 13,
-                        fontWeight: 500,
-                        padding: "0 10px",
-                        outline: "none",
-                        colorScheme: "dark",
-                        cursor: "pointer",
-                      }}
-                    />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <SectionLabel>Range</SectionLabel>
+                  {(draftDateFrom || draftDateTo) && (
+                    <button
+                      type="button"
+                      onClick={() => { setDraftDateFrom(""); setDraftDateTo(""); }}
+                      style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {/* Selected range summary */}
+                {(draftDateFrom || draftDateTo) && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 6, marginBottom: 10,
+                    padding: "6px 10px", borderRadius: 8,
+                    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
+                  }}>
+                    <span style={{ fontSize: 12, color: "#f1f5f9", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
+                      {draftDateFrom ? new Date(draftDateFrom + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                    </span>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>→</span>
+                    <span style={{ fontSize: 12, color: "#f1f5f9", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
+                      {draftDateTo ? new Date(draftDateTo + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                    </span>
                   </div>
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontSize: 10, color: "rgba(148,163,184,0.45)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>To</span>
-                    <input
-                      type="date"
-                      value={draftDateTo}
-                      min={draftDateFrom || undefined}
-                      onChange={e => setDraftDateTo(e.target.value)}
-                      style={{
-                        width: "100%",
-                        height: 40,
-                        borderRadius: 10,
-                        background: "rgba(255,255,255,0.04)",
-                        border: draftDateTo ? "1.5px solid rgba(255,255,255,0.30)" : "1px solid rgba(255,255,255,0.09)",
-                        color: draftDateTo ? "#f1f5f9" : "rgba(148,163,184,0.5)",
-                        fontSize: 13,
-                        fontWeight: 500,
-                        padding: "0 10px",
-                        outline: "none",
-                        colorScheme: "dark",
-                        cursor: "pointer",
-                      }}
-                    />
-                  </div>
+                )}
+                {/* Compact inline range picker */}
+                <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <DayPicker
+                    mode="range"
+                    selected={{
+                      from: draftDateFrom ? new Date(draftDateFrom + "T00:00:00") : undefined,
+                      to:   draftDateTo   ? new Date(draftDateTo   + "T00:00:00") : undefined,
+                    }}
+                    onSelect={(range: DateRange | undefined) => {
+                      setDraftDateFrom(range?.from ? range.from.toISOString().slice(0, 10) : "");
+                      setDraftDateTo(  range?.to   ? range.to.toISOString().slice(0, 10)   : "");
+                    }}
+                    style={{ "--cell-size": "34px" } as React.CSSProperties}
+                    classNames={{
+                      root:           "w-full select-none",
+                      months:         "w-full",
+                      month:          "w-full",
+                      month_caption:  "flex items-center justify-center h-8 px-8 mb-1",
+                      caption_label:  "text-[13px] font-semibold text-white/80",
+                      nav:            "absolute inset-x-0 top-0 flex items-center justify-between px-1 h-8",
+                      button_previous:"flex items-center justify-center w-7 h-7 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors",
+                      button_next:    "flex items-center justify-center w-7 h-7 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors",
+                      weekdays:       "flex mb-1",
+                      weekday:        "flex-1 text-center text-[10px] font-semibold text-white/25 uppercase",
+                      weeks:          "w-full",
+                      week:           "flex w-full",
+                      day:            "flex-1 flex items-center justify-center p-0",
+                      day_button:     "w-full h-[--cell-size] text-[12px] font-medium text-white/70 hover:bg-white/10 hover:text-white rounded-md transition-colors",
+                      today:          "text-white font-bold",
+                      outside:        "opacity-25",
+                      disabled:       "opacity-20 cursor-not-allowed",
+                      range_start:    "bg-white/20 rounded-l-md rounded-r-none",
+                      range_middle:   "bg-white/10 rounded-none",
+                      range_end:      "bg-white/20 rounded-r-md rounded-l-none",
+                      selected:       "bg-white text-black rounded-md font-bold",
+                    }}
+                  />
                 </div>
               </div>
             </div>
