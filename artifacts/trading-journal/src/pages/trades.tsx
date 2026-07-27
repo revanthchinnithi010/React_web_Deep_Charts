@@ -133,16 +133,26 @@ function FilterPill({
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
+// activeInput: which slot the user is filling ("from" | "to")
+// onSelect: called with the chosen YYYY-MM-DD string
 function MiniRangePicker({
-  from, to, onChange,
+  from, to, activeInput, onSelect,
 }: {
-  from: string; // YYYY-MM-DD or ""
-  to: string;   // YYYY-MM-DD or ""
-  onChange: (from: string, to: string) => void;
+  from: string;
+  to: string;
+  activeInput: "from" | "to";
+  onSelect: (date: string) => void;
 }) {
   const today = new Date();
-  const [viewYear,  setViewYear]  = useState(() => today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(() => today.getMonth());
+  // Start calendar on the month relevant to the active input
+  const seedDate = activeInput === "to" && to
+    ? new Date(to + "T00:00:00")
+    : activeInput === "from" && from
+      ? new Date(from + "T00:00:00")
+      : today;
+
+  const [viewYear,  setViewYear]  = useState(() => seedDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => seedDate.getMonth());
 
   const fromDate = from ? new Date(from + "T00:00:00") : null;
   const toDate   = to   ? new Date(to   + "T00:00:00") : null;
@@ -156,57 +166,36 @@ function MiniRangePicker({
     else setViewMonth(m => m + 1);
   };
 
-  // Build calendar grid
-  const firstDay  = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+  const firstDay  = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMon = new Date(viewYear, viewMonth + 1, 0).getDate();
   const cells: (number | null)[] = [
     ...Array(firstDay).fill(null),
     ...Array.from({ length: daysInMon }, (_, i) => i + 1),
   ];
-  // Pad to full weeks
   while (cells.length % 7 !== 0) cells.push(null);
 
   const toYMD = (y: number, m: number, d: number) =>
     `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-  const handleDay = (day: number) => {
-    const clicked = toYMD(viewYear, viewMonth, day);
-    if (!from || (from && to)) {
-      // Start fresh range
-      onChange(clicked, "");
-    } else {
-      // Second click — order from/to
-      if (clicked < from) onChange(clicked, from);
-      else                 onChange(from, clicked);
-    }
-  };
-
-  const isFrom   = (d: number) => toYMD(viewYear, viewMonth, d) === from;
-  const isTo     = (d: number) => toYMD(viewYear, viewMonth, d) === to;
-  const inRange  = (d: number) => {
+  const isFrom  = (d: number) => toYMD(viewYear, viewMonth, d) === from;
+  const isTo    = (d: number) => toYMD(viewYear, viewMonth, d) === to;
+  const inRange = (d: number) => {
     if (!fromDate || !toDate) return false;
     const t = new Date(viewYear, viewMonth, d).getTime();
     return t > fromDate.getTime() && t < toDate.getTime();
   };
-  const isToday  = (d: number) => d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+  const isToday = (d: number) =>
+    d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
 
   const COL = `${100 / 7}%`;
 
   return (
     <div style={{ userSelect: "none" }}>
-      {/* Month nav header */}
+      {/* Month nav */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <button
-          type="button" onClick={prevMonth}
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}
-        >‹</button>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>
-          {MONTHS[viewMonth]} {viewYear}
-        </span>
-        <button
-          type="button" onClick={nextMonth}
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}
-        >›</button>
+        <button type="button" onClick={prevMonth} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 400 }}>‹</button>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{MONTHS[viewMonth]} {viewYear}</span>
+        <button type="button" onClick={nextMonth} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 400 }}>›</button>
       </div>
 
       {/* Weekday row */}
@@ -224,53 +213,31 @@ function MiniRangePicker({
           const end    = isTo(day);
           const middle = inRange(day);
           const todayC = isToday(day);
-
-          let bg = "transparent";
-          let color = todayC ? "#fff" : "rgba(255,255,255,0.72)";
-          let fontWeight: number = todayC ? 700 : 400;
-          let borderRadius = "8px";
-
-          if (start || end) {
-            bg = "rgba(255,255,255,0.92)";
-            color = "#0a0a0f";
-            fontWeight = 700;
-            borderRadius = start && to  ? (end ? "8px" : "8px 0 0 8px")
-                         : end  && from ? "0 8px 8px 0"
-                         : "8px";
-          } else if (middle) {
-            bg = "rgba(255,255,255,0.10)";
-            borderRadius = "0";
-          }
+          const isSelected = start || end;
 
           return (
             <div key={idx} style={{ position: "relative", height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {/* Range fill band (full-width, behind circle) */}
-              {middle && (
-                <div style={{ position: "absolute", inset: "4px 0", background: "rgba(255,255,255,0.08)", zIndex: 0 }} />
-              )}
-              {start && to && (
-                <div style={{ position: "absolute", top: 4, bottom: 4, left: "50%", right: 0, background: "rgba(255,255,255,0.08)", zIndex: 0 }} />
-              )}
-              {end && from && (
-                <div style={{ position: "absolute", top: 4, bottom: 4, left: 0, right: "50%", background: "rgba(255,255,255,0.08)", zIndex: 0 }} />
-              )}
+              {/* Range band */}
+              {middle && <div style={{ position: "absolute", inset: "4px 0", background: "rgba(255,255,255,0.08)", zIndex: 0 }} />}
+              {start && to && <div style={{ position: "absolute", top: 4, bottom: 4, left: "50%", right: 0, background: "rgba(255,255,255,0.08)", zIndex: 0 }} />}
+              {end && from && <div style={{ position: "absolute", top: 4, bottom: 4, left: 0, right: "50%", background: "rgba(255,255,255,0.08)", zIndex: 0 }} />}
               <button
                 type="button"
-                onClick={() => handleDay(day)}
+                onClick={() => onSelect(toYMD(viewYear, viewMonth, day))}
                 style={{
                   position: "relative", zIndex: 1,
                   width: 30, height: 30,
-                  borderRadius: (start || end) ? "50%" : "6px",
-                  background: (start || end) ? bg : "transparent",
+                  borderRadius: "50%",
+                  background: isSelected ? "rgba(255,255,255,0.92)" : "transparent",
                   border: "none",
-                  color,
-                  fontWeight,
+                  color: isSelected ? "#0a0a0f" : todayC ? "#fff" : "rgba(255,255,255,0.72)",
+                  fontWeight: isSelected || todayC ? 700 : 400,
                   fontSize: 12.5,
                   cursor: "pointer",
                   transition: "background 0.12s",
                   outline: "none",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: todayC && !start && !end ? "inset 0 0 0 1px rgba(255,255,255,0.25)" : "none",
+                  boxShadow: todayC && !isSelected ? "inset 0 0 0 1px rgba(255,255,255,0.25)" : "none",
                 }}
               >
                 {day}
@@ -318,8 +285,9 @@ function FilterBottomSheet({
   const [draftBroker,   setDraftBroker]   = useState(brokerFilter);
   const [draftDateFrom, setDraftDateFrom] = useState(dateFrom);
   const [draftDateTo,   setDraftDateTo]   = useState(dateTo);
+  const [activeInput,   setActiveInput]   = useState<"from" | "to" | null>(null);
 
-  // Sync draft when sheet opens (so it reflects current applied state)
+  // Sync draft when sheet opens
   const prevOpenRef = useState(false);
   if (prevOpenRef[0] !== open) {
     prevOpenRef[1](open);
@@ -329,6 +297,7 @@ function FilterBottomSheet({
       setDraftBroker(brokerFilter);
       setDraftDateFrom(dateFrom);
       setDraftDateTo(dateTo);
+      setActiveInput(null);
     }
   }
 
@@ -338,6 +307,28 @@ function FilterBottomSheet({
     setDraftBroker("all");
     setDraftDateFrom("");
     setDraftDateTo("");
+    setActiveInput(null);
+  };
+
+  // Called when user picks a day in the calendar
+  const handleDateSelect = (date: string) => {
+    if (activeInput === "from") {
+      setDraftDateFrom(date);
+      // If new from > existing to, clear to
+      if (draftDateTo && date > draftDateTo) setDraftDateTo("");
+      setActiveInput("to");
+    } else {
+      // "to"
+      if (draftDateFrom && date < draftDateFrom) {
+        // Swapped — treat as new "from"
+        setDraftDateFrom(date);
+        setDraftDateTo("");
+        setActiveInput("to");
+      } else {
+        setDraftDateTo(date);
+        setActiveInput(null);
+      }
+    }
   };
 
   const handleApply = () => {
@@ -442,8 +433,13 @@ function FilterBottomSheet({
               </button>
             </div>
 
-            {/* Filter groups */}
-            <div style={{ padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* Filter groups — scrollable */}
+            <div style={{
+              flex: 1, overflowY: "auto", overflowX: "hidden",
+              padding: "18px 18px 8px",
+              display: "flex", flexDirection: "column", gap: 20,
+              WebkitOverflowScrolling: "touch",
+            }}>
               {/* Trade Result */}
               <div>
                 <SectionLabel>Trade Result</SectionLabel>
@@ -454,11 +450,7 @@ function FilterBottomSheet({
                     { v: "loss",      label: "Loss",      accent: "#ef4444" },
                     { v: "breakeven", label: "Breakeven", accent: "#f59e0b" },
                   ].map(({ v, label, accent }) => (
-                    <Chip
-                      key={v} label={label} accent={accent}
-                      active={draftOutcome === v}
-                      onClick={() => setDraftOutcome(v)}
-                    />
+                    <Chip key={v} label={label} accent={accent} active={draftOutcome === v} onClick={() => setDraftOutcome(v)} />
                   ))}
                 </div>
               </div>
@@ -472,11 +464,7 @@ function FilterBottomSheet({
                     { v: "long",  label: "Long",  accent: "#60a5fa" },
                     { v: "short", label: "Short", accent: "#f97316" },
                   ].map(({ v, label, accent }) => (
-                    <Chip
-                      key={v} label={label} accent={accent}
-                      active={draftSide === v}
-                      onClick={() => setDraftSide(v)}
-                    />
+                    <Chip key={v} label={label} accent={accent} active={draftSide === v} onClick={() => setDraftSide(v)} />
                   ))}
                 </div>
               </div>
@@ -486,60 +474,93 @@ function FilterBottomSheet({
                 <SectionLabel>Broker</SectionLabel>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {BROKER_OPTS.map(({ value, label, color }) => (
-                    <Chip
-                      key={value} label={label} accent={color as string | undefined}
-                      active={draftBroker === value}
-                      onClick={() => setDraftBroker(value)}
-                    />
+                    <Chip key={value} label={label} accent={color as string | undefined} active={draftBroker === value} onClick={() => setDraftBroker(value)} />
                   ))}
                 </div>
               </div>
 
               {/* Date Range */}
               <div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                {/* Header row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <SectionLabel>Range</SectionLabel>
                   {(draftDateFrom || draftDateTo) && (
-                    <button
-                      type="button"
-                      onClick={() => { setDraftDateFrom(""); setDraftDateTo(""); }}
-                      style={{ fontSize: 11, color: "rgba(148,163,184,0.6)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                    >
+                    <button type="button" onClick={() => { setDraftDateFrom(""); setDraftDateTo(""); setActiveInput(null); }}
+                      style={{ fontSize: 11, color: "rgba(148,163,184,0.55)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                       Clear
                     </button>
                   )}
                 </div>
-                {/* Selected range summary pill */}
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 6, marginBottom: 10,
-                  padding: "7px 10px", borderRadius: 8,
-                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
-                  minHeight: 34,
-                }}>
-                  <span style={{ fontSize: 12, color: draftDateFrom ? "#f1f5f9" : "rgba(148,163,184,0.35)", fontWeight: 500 }}>
-                    {draftDateFrom ? new Date(draftDateFrom + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Start date"}
-                  </span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", flex: 1, textAlign: "center" }}>→</span>
-                  <span style={{ fontSize: 12, color: draftDateTo ? "#f1f5f9" : "rgba(148,163,184,0.35)", fontWeight: 500 }}>
-                    {draftDateTo ? new Date(draftDateTo + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "End date"}
-                  </span>
+
+                {/* From / To tap inputs */}
+                <div style={{ display: "flex", gap: 8, marginBottom: activeInput ? 10 : 0 }}>
+                  {(["from", "to"] as const).map(slot => {
+                    const val   = slot === "from" ? draftDateFrom : draftDateTo;
+                    const label = slot === "from" ? "From" : "To";
+                    const isActive = activeInput === slot;
+                    const hasVal   = Boolean(val);
+                    return (
+                      <button
+                        key={slot} type="button"
+                        onClick={() => setActiveInput(isActive ? null : slot)}
+                        style={{
+                          flex: 1, height: 42, borderRadius: 10, cursor: "pointer",
+                          display: "flex", flexDirection: "column", alignItems: "flex-start",
+                          justifyContent: "center", padding: "0 12px", gap: 1,
+                          background: isActive ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.03)",
+                          border: isActive
+                            ? "1.5px solid rgba(255,255,255,0.35)"
+                            : hasVal
+                              ? "1px solid rgba(255,255,255,0.18)"
+                              : "1px solid rgba(255,255,255,0.08)",
+                          transition: "border 0.15s, background 0.15s",
+                        }}
+                      >
+                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: isActive ? "rgba(255,255,255,0.55)" : "rgba(148,163,184,0.4)" }}>
+                          {label}
+                        </span>
+                        <span style={{ fontSize: 12.5, fontWeight: hasVal ? 500 : 400, color: hasVal ? "#f1f5f9" : "rgba(148,163,184,0.35)", lineHeight: 1 }}>
+                          {val ? new Date(val + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-                {/* Compact inline calendar */}
-                <div style={{ padding: "10px 4px 4px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <MiniRangePicker
-                    from={draftDateFrom}
-                    to={draftDateTo}
-                    onChange={(f, t) => { setDraftDateFrom(f); setDraftDateTo(t); }}
-                  />
-                </div>
+
+                {/* Calendar — slides in when an input is active */}
+                <AnimatePresence>
+                  {activeInput && (
+                    <motion.div
+                      key="range-cal"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      style={{ overflow: "hidden" }}
+                    >
+                      {/* Hint */}
+                      <p style={{ fontSize: 11, color: "rgba(148,163,184,0.45)", marginBottom: 8, marginTop: 2 }}>
+                        {activeInput === "from" ? "Tap a start date" : "Tap an end date"}
+                      </p>
+                      <div style={{ padding: "10px 6px 8px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                        <MiniRangePicker
+                          from={draftDateFrom}
+                          to={draftDateTo}
+                          activeInput={activeInput}
+                          onSelect={handleDateSelect}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
-            {/* Footer actions */}
+            {/* Footer actions — pinned */}
             <div style={{
+              flexShrink: 0,
               display: "flex", gap: 10, padding: "14px 18px 4px",
               borderTop: "1px solid rgba(255,255,255,0.06)",
-              marginTop: 4,
             }}>
               <button
                 onClick={handleReset}
