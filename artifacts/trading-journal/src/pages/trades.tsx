@@ -1157,51 +1157,43 @@ export default function Trades() {
                 <span className="absolute left-1/2 -translate-x-1/2 text-[15px] font-semibold text-white tracking-tight">Trade Details</span>
               </div>
 
-              {/* ── Summary Card ── */}
+              {/* ── Summary header: symbol + side ── */}
               <motion.div
                 layoutId={selectedTradeId !== null ? `trd-${selectedTradeId}` : undefined}
                 transition={{ layout: { duration: 0.23, ease: [0.25, 0.46, 0.45, 0.94] } }}
-                className="mx-4 mt-4 mb-1 rounded-2xl border border-white/[0.08] overflow-hidden"
-                style={{ background: "linear-gradient(145deg, #0f0f0f 0%, #0a0a0a 100%)" }}
+                className="mx-4 mt-4 mb-1 flex items-center justify-between"
               >
-                {/* top row: symbol + position badge */}
-                <div className="flex items-center justify-between px-4 pt-4 pb-3">
-                  <div>
-                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Symbol</p>
-                    <h2 className="text-2xl font-black tracking-tight text-white leading-none">{selectedTrade.symbol}</h2>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
-                    selectedTrade.side === "long"
-                      ? "bg-blue-500/15 text-blue-400 border border-blue-500/20"
-                      : "bg-orange-500/15 text-orange-400 border border-orange-500/20"
-                  }`}>
-                    {selectedTrade.side === "long" ? "LONG" : "SHORT"}
-                  </span>
+                <div>
+                  <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Symbol</p>
+                  <h2 className="text-2xl font-black tracking-tight text-white leading-none">{selectedTrade.symbol}</h2>
                 </div>
+                <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
+                  selectedTrade.side === "long"
+                    ? "bg-blue-500/15 text-blue-400 border border-blue-500/20"
+                    : "bg-orange-500/15 text-orange-400 border border-orange-500/20"
+                }`}>
+                  {selectedTrade.side === "long" ? "LONG" : "SHORT"}
+                </span>
+              </motion.div>
 
-                {/* divider */}
-                <div className="mx-4 h-px bg-white/[0.06]" />
-
-                {/* bottom row: P&L + date */}
-                <div className="flex items-center justify-between px-4 pt-3 pb-4">
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6" style={{ background: "#000000" }}>
+                {/* Date + PnL — open strip, no card box */}
+                <div className="flex items-center justify-between px-1 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                   <div>
-                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">
-                      {selectedTrade.pnl >= 0 ? "Profit" : "Loss"}
-                    </p>
-                    <p className={`text-xl font-black ${selectedTrade.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      {selectedTrade.pnl >= 0 ? "+" : ""}{fc(selectedTrade.pnl)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Date</p>
+                    <p className="text-[9px] font-semibold text-white/35 uppercase tracking-widest mb-0.5">Date</p>
                     <p className="text-[13px] font-semibold text-white/80">
                       {new Date(selectedTrade.entryDate).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
                     </p>
                   </div>
+                  <div className="text-right">
+                    <p className="text-[9px] font-semibold text-white/35 uppercase tracking-widest mb-0.5">
+                      {selectedTrade.pnl >= 0 ? "Profit" : "Loss"}
+                    </p>
+                    <p className="text-[20px] font-black leading-tight" style={{ color: selectedTrade.pnl >= 0 ? "#34d399" : "#f87171" }}>
+                      {selectedTrade.pnl >= 0 ? "+" : ""}{fc(selectedTrade.pnl)}
+                    </p>
+                  </div>
                 </div>
-              </motion.div>
-
-              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6" style={{ background: "#000000" }}>
                 {/* Metrics Grid */}
                 <div className="grid grid-cols-2 gap-2.5">
                   {[

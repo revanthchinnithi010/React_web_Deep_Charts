@@ -366,21 +366,36 @@ const TradeDetailSheet = memo(function TradeDetailSheet({ trade, onClose, fc }: 
 
             {/* Scrollable body — content starts immediately below header */}
             <div className="flex-1 overflow-y-auto px-6 pt-3 pb-5 space-y-6" style={{ background: "#000000" }}>
+              {/* Date + PnL — open strip, no card box */}
+              <div className="flex items-center justify-between px-1 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                <div>
+                  <p className="text-[9px] font-semibold text-white/35 uppercase tracking-widest mb-0.5">Date</p>
+                  <p className="text-[13px] font-semibold text-white/80">
+                    {new Date(trade.entryDate).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] font-semibold text-white/35 uppercase tracking-widest mb-0.5">
+                    {trade.pnl >= 0 ? "Profit" : "Loss"}
+                  </p>
+                  <p className="text-[20px] font-black leading-tight" style={{ color: trade.pnl >= 0 ? "#34d399" : "#f87171" }}>
+                    {trade.pnl >= 0 ? "+" : ""}{fc(trade.pnl)}
+                  </p>
+                </div>
+              </div>
               {/* Metrics grid */}
               <div className="grid grid-cols-2 gap-2.5">
                 {[
-                  { label: "Date",         value: new Date(trade.entryDate).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) },
-                  { label: trade.pnl >= 0 ? "Profit" : "Loss", value: (trade.pnl >= 0 ? "+" : "") + fc(trade.pnl), color: trade.pnl >= 0 ? "#34d399" : "#f87171" },
                   { label: "Entry",        value: fc(trade.entryPrice) },
                   { label: "Exit",         value: trade.exitPrice == null ? "—" : fc(trade.exitPrice) },
                   { label: "Risk / Reward", value: trade.riskRewardRatio ? `${trade.riskRewardRatio.toFixed(2)}R` : "—" },
                   { label: "Quantity",     value: String(trade.quantity) },
                   { label: "Stop Loss",    value: trade.stopLoss ? fc(trade.stopLoss) : "—" },
                   { label: "Take Profit",  value: trade.takeProfit ? fc(trade.takeProfit) : "—" },
-                ].map(({ label, value, color }) => (
+                ].map(({ label, value }) => (
                   <div key={label} className="p-3 rounded-xl border" style={{ background: "#111111", borderColor: "rgba(255,255,255,0.09)" }}>
                     <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider mb-1">{label}</p>
-                    <p className="text-[14px] font-bold font-mono leading-tight" style={{ color: color ?? "#ffffff" }}>{value}</p>
+                    <p className="text-[14px] font-bold font-mono leading-tight text-white">{value}</p>
                   </div>
                 ))}
               </div>
