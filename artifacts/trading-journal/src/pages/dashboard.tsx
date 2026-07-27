@@ -346,16 +346,18 @@ const DayDetailSheet = memo(function DayDetailSheet({
               <div className="px-4 py-4 space-y-5">
                 <div className="grid grid-cols-2 gap-2.5">
                   {[
+                    { label: "Date",          value: new Date(selectedTrade.entryDate).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) },
+                    { label: (selectedTrade.pnl ?? 0) >= 0 ? "Profit" : "Loss", value: ((selectedTrade.pnl ?? 0) >= 0 ? "+" : "") + fc(selectedTrade.pnl ?? 0), color: (selectedTrade.pnl ?? 0) >= 0 ? "#34d399" : "#f87171" },
                     { label: "Entry",         value: fc(selectedTrade.entryPrice ?? 0) },
                     { label: "Exit",          value: selectedTrade.exitPrice == null ? "—" : fc(selectedTrade.exitPrice) },
                     { label: "Risk / Reward", value: selectedTrade.riskRewardRatio ? `${selectedTrade.riskRewardRatio.toFixed(2)}R` : "—" },
                     { label: "Quantity",      value: String(selectedTrade.quantity) },
                     { label: "Stop Loss",     value: selectedTrade.stopLoss ? fc(selectedTrade.stopLoss) : "—" },
                     { label: "Take Profit",   value: selectedTrade.takeProfit ? fc(selectedTrade.takeProfit) : "—" },
-                  ].map(({ label, value }) => (
+                  ].map(({ label, value, color }) => (
                     <div key={label} className="p-3 rounded-xl border" style={{ background: "#111111", borderColor: "rgba(255,255,255,0.09)" }}>
                       <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-1">{label}</p>
-                      <p className="text-[14px] font-bold font-mono text-white leading-tight">{value}</p>
+                      <p className="text-[14px] font-bold font-mono leading-tight" style={{ color: color ?? "#ffffff" }}>{value}</p>
                     </div>
                   ))}
                 </div>
