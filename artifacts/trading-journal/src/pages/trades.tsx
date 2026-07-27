@@ -745,7 +745,7 @@ export default function Trades() {
               </span>
             )}
           </AnimatedIconButton>
-          {/* Log Trade */}
+          {/* Add Trade */}
           <AnimatedButton
             onClick={openModal}
             className="flex items-center gap-1.5 px-3.5 h-9 rounded-xl border-2 border-white bg-white text-black text-[13px] font-semibold hover:bg-white/90 shadow-md shadow-black/10 shrink-0"
@@ -753,7 +753,7 @@ export default function Trades() {
             <span className="flex items-center justify-center w-4 h-4 rounded-full bg-black">
               <Plus className="w-2.5 h-2.5 text-white" />
             </span>
-            Log
+            Add Trade
           </AnimatedButton>
         </div>
       </div>
@@ -1034,7 +1034,7 @@ export default function Trades() {
               flexShrink: 0,
             }}>
               <div>
-                <p style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", letterSpacing: "-0.01em", margin: 0 }}>Log New Trade</p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", letterSpacing: "-0.01em", margin: 0 }}>Add Trade</p>
                 <p style={{ fontSize: 12, color: "rgba(148,163,184,0.55)", margin: "2px 0 0" }}>Record your trade details and analysis</p>
               </div>
               <button
