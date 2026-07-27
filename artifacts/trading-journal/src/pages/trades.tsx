@@ -146,6 +146,8 @@ function FilterBottomSheet({
   outcomeFilter,
   sideFilter,
   brokerFilter,
+  dateFrom,
+  dateTo,
   onApply,
 }: {
   open: boolean;
@@ -153,11 +155,15 @@ function FilterBottomSheet({
   outcomeFilter: string;
   sideFilter: string;
   brokerFilter: string;
-  onApply: (outcome: string, side: string, broker: string) => void;
+  dateFrom: string;
+  dateTo: string;
+  onApply: (outcome: string, side: string, broker: string, dateFrom: string, dateTo: string) => void;
 }) {
-  const [draftOutcome, setDraftOutcome] = useState(outcomeFilter);
-  const [draftSide,    setDraftSide]    = useState(sideFilter);
-  const [draftBroker,  setDraftBroker]  = useState(brokerFilter);
+  const [draftOutcome,  setDraftOutcome]  = useState(outcomeFilter);
+  const [draftSide,     setDraftSide]     = useState(sideFilter);
+  const [draftBroker,   setDraftBroker]   = useState(brokerFilter);
+  const [draftDateFrom, setDraftDateFrom] = useState(dateFrom);
+  const [draftDateTo,   setDraftDateTo]   = useState(dateTo);
 
   // Sync draft when sheet opens (so it reflects current applied state)
   const prevOpenRef = useState(false);
@@ -167,6 +173,8 @@ function FilterBottomSheet({
       setDraftOutcome(outcomeFilter);
       setDraftSide(sideFilter);
       setDraftBroker(brokerFilter);
+      setDraftDateFrom(dateFrom);
+      setDraftDateTo(dateTo);
     }
   }
 
@@ -174,10 +182,12 @@ function FilterBottomSheet({
     setDraftOutcome("all");
     setDraftSide("all");
     setDraftBroker("all");
+    setDraftDateFrom("");
+    setDraftDateTo("");
   };
 
   const handleApply = () => {
-    onApply(draftOutcome, draftSide, draftBroker);
+    onApply(draftOutcome, draftSide, draftBroker, draftDateFrom, draftDateTo);
     onClose();
   };
 
@@ -330,6 +340,58 @@ function FilterBottomSheet({
                   ))}
                 </div>
               </div>
+
+              {/* Date Range */}
+              <div>
+                <SectionLabel>Range</SectionLabel>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 10, color: "rgba(148,163,184,0.45)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>From</span>
+                    <input
+                      type="date"
+                      value={draftDateFrom}
+                      onChange={e => setDraftDateFrom(e.target.value)}
+                      style={{
+                        width: "100%",
+                        height: 40,
+                        borderRadius: 10,
+                        background: "rgba(255,255,255,0.04)",
+                        border: draftDateFrom ? "1.5px solid rgba(255,255,255,0.30)" : "1px solid rgba(255,255,255,0.09)",
+                        color: draftDateFrom ? "#f1f5f9" : "rgba(148,163,184,0.5)",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        padding: "0 10px",
+                        outline: "none",
+                        colorScheme: "dark",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: 10, color: "rgba(148,163,184,0.45)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>To</span>
+                    <input
+                      type="date"
+                      value={draftDateTo}
+                      min={draftDateFrom || undefined}
+                      onChange={e => setDraftDateTo(e.target.value)}
+                      style={{
+                        width: "100%",
+                        height: 40,
+                        borderRadius: 10,
+                        background: "rgba(255,255,255,0.04)",
+                        border: draftDateTo ? "1.5px solid rgba(255,255,255,0.30)" : "1px solid rgba(255,255,255,0.09)",
+                        color: draftDateTo ? "#f1f5f9" : "rgba(148,163,184,0.5)",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        padding: "0 10px",
+                        outline: "none",
+                        colorScheme: "dark",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Footer actions */}
@@ -397,6 +459,8 @@ export default function Trades() {
   const [outcomeFilter, setOutcomeFilter] = useState<string>("all");
   const [sideFilter, setSideFilter] = useState<string>("all");
   const [brokerFilter, setBrokerFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<ModalTab>("details");
@@ -408,7 +472,8 @@ export default function Trades() {
   const activeFilterCount =
     (outcomeFilter !== "all" ? 1 : 0) +
     (sideFilter    !== "all" ? 1 : 0) +
-    (brokerFilter  !== "all" ? 1 : 0);
+    (brokerFilter  !== "all" ? 1 : 0) +
+    (dateFrom || dateTo     ? 1 : 0);
 
   const queryClient = useQueryClient();
 
@@ -476,13 +541,18 @@ export default function Trades() {
 
   const filteredTrades = useMemo(() => {
     if (!tradesResponse) return [];
+    const fromMs = dateFrom ? new Date(dateFrom).setHours(0, 0, 0, 0) : null;
+    const toMs   = dateTo   ? new Date(dateTo).setHours(23, 59, 59, 999) : null;
     return tradesResponse.trades.filter(t => {
-      const broker = BROKER_MAP[t.symbol] || "";
+      const broker  = BROKER_MAP[t.symbol] || "";
+      const entryMs = new Date(t.entryDate).getTime();
       return t.exitPrice != null &&
-             (sideFilter === "all" || t.side === sideFilter) &&
-             (brokerFilter === "all" || broker === brokerFilter);
+             (sideFilter   === "all" || t.side === sideFilter) &&
+             (brokerFilter === "all" || broker === brokerFilter) &&
+             (fromMs === null || entryMs >= fromMs) &&
+             (toMs   === null || entryMs <= toMs);
     });
-  }, [tradesResponse, sideFilter, brokerFilter]);
+  }, [tradesResponse, sideFilter, brokerFilter, dateFrom, dateTo]);
 
   const inputCls = "bg-white/[0.04] border-white/[0.09] rounded-xl h-10 text-[13px] focus:border-primary/50 focus:ring-0 placeholder:text-muted-foreground/50 transition-colors";
   const labelCls = "text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider";
@@ -602,10 +672,14 @@ export default function Trades() {
         outcomeFilter={outcomeFilter}
         sideFilter={sideFilter}
         brokerFilter={brokerFilter}
-        onApply={(outcome, side, broker) => {
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onApply={(outcome, side, broker, from, to) => {
           setOutcomeFilter(outcome);
           setSideFilter(side);
           setBrokerFilter(broker);
+          setDateFrom(from);
+          setDateTo(to);
           setPage(1);
         }}
       />
