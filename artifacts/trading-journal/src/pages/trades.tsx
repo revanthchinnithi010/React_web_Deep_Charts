@@ -639,9 +639,20 @@ const AddTradeSheet = memo(function AddTradeSheet({
           position: "fixed", inset: 0, zIndex: 501,
           background: "#000000",
           display: "flex", flexDirection: "column",
-          transform: open ? "translateY(0)" : "translateY(100%)",
-          transition: "transform 0.32s cubic-bezier(0.32,0.72,0,1)",
-          willChange: "transform",
+          // Enter: spring up from 48px below + scale up from 0.97 + fade in
+          // Exit:  snap down 24px + scale down to 0.98 + fade out — different
+          //        easing and duration per direction so open feels responsive
+          //        and close feels instant.
+          opacity:    open ? 1 : 0,
+          transform:  open
+            ? "translate3d(0,0,0) scale(1)"
+            : "translate3d(0,48px,0) scale(0.97)",
+          transition: open
+            ? "opacity 0.28s cubic-bezier(0.22,1,0.36,1), transform 0.38s cubic-bezier(0.22,1,0.36,1)"
+            : "opacity 0.2s cubic-bezier(0.4,0,1,1), transform 0.24s cubic-bezier(0.4,0,1,1)",
+          willChange:               "transform, opacity",
+          backfaceVisibility:       "hidden",
+          WebkitBackfaceVisibility: "hidden",
           pointerEvents: open ? "auto" : "none",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
