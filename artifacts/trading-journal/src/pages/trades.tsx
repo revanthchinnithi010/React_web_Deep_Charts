@@ -654,7 +654,6 @@ const AddTradeSheet = memo(function AddTradeSheet({
           backfaceVisibility:       "hidden",
           WebkitBackfaceVisibility: "hidden",
           pointerEvents: open ? "auto" : "none",
-          paddingTop: "env(safe-area-inset-top, 0px)",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
