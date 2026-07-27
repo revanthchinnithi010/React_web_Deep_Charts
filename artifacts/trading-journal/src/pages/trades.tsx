@@ -1012,7 +1012,7 @@ export default function Trades() {
               borderTop: "1px solid rgba(255,255,255,0.09)",
               borderRadius: "20px 20px 0 0",
               boxShadow: "0 -16px 64px rgba(0,0,0,0.85)",
-              maxHeight: "92dvh",
+              height: "90dvh",
               display: "flex", flexDirection: "column",
               transform: isModalOpen ? "translateY(0)" : "translateY(100%)",
               transition: "transform 0.32s cubic-bezier(0.32,0.72,0,1)",
