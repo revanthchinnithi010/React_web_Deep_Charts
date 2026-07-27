@@ -633,62 +633,47 @@ const AddTradeSheet = memo(function AddTradeSheet({
 
   return createPortal(
     <>
-      {/* Backdrop */}
+      {/* Full-screen sheet */}
       <div
-        onClick={onClose}
         style={{
-          position: "fixed", inset: 0, zIndex: 500,
-          background: "rgba(0,0,0,0.72)",
-          opacity: open ? 1 : 0,
-          pointerEvents: open ? "auto" : "none",
-          transition: "opacity 0.28s ease",
-        }}
-      />
-
-      {/* Sheet */}
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 501,
+          position: "fixed", inset: 0, zIndex: 501,
           background: "#000000",
-          borderTop: "1px solid rgba(255,255,255,0.09)",
-          borderRadius: "20px 20px 0 0",
-          boxShadow: "0 -16px 64px rgba(0,0,0,0.85)",
-          height: "90dvh",
           display: "flex", flexDirection: "column",
           transform: open ? "translateY(0)" : "translateY(100%)",
           transition: "transform 0.32s cubic-bezier(0.32,0.72,0,1)",
           willChange: "transform",
           pointerEvents: open ? "auto" : "none",
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0px)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
-        {/* Handle pill */}
-        <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4, flexShrink: 0 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 9999, background: "rgba(255,255,255,0.18)" }} />
-        </div>
-
-        {/* Header */}
+        {/* Nav bar — back button + centred title */}
         <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "6px 18px 14px",
+          display: "flex", alignItems: "center",
+          height: 56,
+          paddingTop: "env(safe-area-inset-top, 0px)",
+          paddingLeft: 8, paddingRight: 16,
           borderBottom: "1px solid rgba(255,255,255,0.06)",
           flexShrink: 0,
+          position: "relative",
         }}>
-          <div>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", letterSpacing: "-0.01em", margin: 0 }}>Add Trade</p>
-            <p style={{ fontSize: 12, color: "rgba(148,163,184,0.55)", margin: "2px 0 0" }}>Record your trade details and analysis</p>
-          </div>
           <button
             onClick={onClose}
             style={{
-              background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.10)",
-              borderRadius: 8, padding: "6px 8px", cursor: "pointer", lineHeight: 0,
-              color: "rgba(148,163,184,0.55)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 36, height: 36, borderRadius: "50%",
+              background: "transparent", border: "none",
+              color: "rgba(255,255,255,0.7)", cursor: "pointer",
             }}
           >
-            <X size={14} />
+            <ArrowLeft size={20} />
           </button>
+          <span style={{
+            position: "absolute", left: "50%", transform: "translateX(-50%)",
+            fontSize: 15, fontWeight: 600, color: "#f1f5f9", letterSpacing: "-0.01em",
+            pointerEvents: "none",
+          }}>
+            Add Trade
+          </span>
         </div>
 
         {/* Tabs */}
