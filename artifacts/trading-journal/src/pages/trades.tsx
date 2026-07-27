@@ -648,8 +648,8 @@ const AddTradeSheet = memo(function AddTradeSheet({
             ? "translate3d(0,0,0) scale(1)"
             : "translate3d(0,48px,0) scale(0.97)",
           transition: open
-            ? "opacity 0.28s cubic-bezier(0.22,1,0.36,1), transform 0.38s cubic-bezier(0.22,1,0.36,1)"
-            : "opacity 0.2s cubic-bezier(0.4,0,1,1), transform 0.24s cubic-bezier(0.4,0,1,1)",
+            ? "opacity 0.18s cubic-bezier(0.22,1,0.36,1), transform 0.22s cubic-bezier(0.22,1,0.36,1)"
+            : "opacity 0.14s cubic-bezier(0.4,0,1,1), transform 0.16s cubic-bezier(0.4,0,1,1)",
           willChange:               "transform, opacity",
           backfaceVisibility:       "hidden",
           WebkitBackfaceVisibility: "hidden",
