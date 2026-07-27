@@ -345,58 +345,27 @@ const TradeDetailSheet = memo(function TradeDetailSheet({ trade, onClose, fc }: 
       >
         {trade && (
           <>
-            {/* Nav header */}
-            <div className="flex items-center px-4 h-14 shrink-0 relative" style={{ background: "#000000" }}>
+            {/* Nav header — symbol + side badge folded in */}
+            <div className="flex items-center gap-3 px-4 h-14 shrink-0" style={{ background: "#000000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <button
                 onClick={onClose}
-                className="flex items-center justify-center w-8 h-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <span className="absolute left-1/2 -translate-x-1/2 text-[15px] font-semibold text-white tracking-tight">
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-white leading-tight truncate">{trade.symbol}</p>
+                <p className="text-[10px] font-semibold leading-tight" style={{ color: trade.side === "long" ? "#35C37A" : "#E0524F" }}>
+                  {trade.side === "long" ? "LONG" : "SHORT"}
+                </p>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex-shrink-0 ${trade.side === "long" ? "bg-blue-500/15 text-blue-400 border border-blue-500/20" : "bg-orange-500/15 text-orange-400 border border-orange-500/20"}`}>
                 Trade Details
               </span>
             </div>
 
-            {/* Summary card */}
-            <div
-              className="mx-4 mt-4 mb-1 rounded-2xl border border-white/[0.08] overflow-hidden"
-              style={{ background: "linear-gradient(145deg,#0f0f0f 0%,#0a0a0a 100%)" }}
-            >
-              <div className="flex items-center justify-between px-4 pt-4 pb-3">
-                <div>
-                  <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Symbol</p>
-                  <h2 className="text-2xl font-black tracking-tight text-white leading-none">{trade.symbol}</h2>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
-                  trade.side === "long"
-                    ? "bg-blue-500/15 text-blue-400 border border-blue-500/20"
-                    : "bg-orange-500/15 text-orange-400 border border-orange-500/20"
-                }`}>
-                  {trade.side === "long" ? "LONG" : "SHORT"}
-                </span>
-              </div>
-              <div className="mx-4 h-px bg-white/[0.06]" />
-              <div className="flex items-center justify-between px-4 pt-3 pb-4">
-                <div>
-                  <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">
-                    {trade.pnl >= 0 ? "Profit" : "Loss"}
-                  </p>
-                  <p className={`text-xl font-black ${trade.pnl >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {trade.pnl >= 0 ? "+" : ""}{fc(trade.pnl)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-0.5">Date</p>
-                  <p className="text-[13px] font-semibold text-white/80">
-                    {new Date(trade.entryDate).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6" style={{ background: "#000000" }}>
+            {/* Scrollable body — content starts immediately below header */}
+            <div className="flex-1 overflow-y-auto px-6 pt-3 pb-5 space-y-6" style={{ background: "#000000" }}>
               {/* Metrics grid */}
               <div className="grid grid-cols-2 gap-2.5">
                 {[
