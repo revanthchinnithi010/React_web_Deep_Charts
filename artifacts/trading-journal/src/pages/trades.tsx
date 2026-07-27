@@ -23,7 +23,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
-import { motion, AnimatePresence, LayoutGroup, type Variants } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   BROKER_MAP,
   ALL_SYMBOLS,
@@ -1084,7 +1084,6 @@ export default function Trades() {
   const labelCls = "text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider";
 
   return (
-    <LayoutGroup id="trades-hero">
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#000000" }}>
 
       {/* ── Secondary header ── */}
@@ -1266,7 +1265,7 @@ export default function Trades() {
                   onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
-                  <motion.div layoutId={`trd-${trade.id}`} transition={{ layout: { duration: 0.23, ease: [0.25, 0.46, 0.45, 0.94] } }}>
+                  <div>
                   {/* Row 1 — Symbol + side badge | PNL */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1319,7 +1318,7 @@ export default function Trades() {
                       {dateStr}
                     </span>
                   </div>
-                  </motion.div>
+                  </div>
                 </div>
               );
             })}
@@ -1401,8 +1400,9 @@ export default function Trades() {
 
               {/* ── Summary header: symbol + side ── */}
               <motion.div
-                layoutId={selectedTradeId !== null ? `trd-${selectedTradeId}` : undefined}
-                transition={{ layout: { duration: 0.23, ease: [0.25, 0.46, 0.45, 0.94] } }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
                 className="mx-4 mt-4 mb-1 flex items-center justify-between"
               >
                 <div>
@@ -1551,6 +1551,5 @@ export default function Trades() {
         </SheetContent>
       </Sheet>
     </div>
-    </LayoutGroup>
   );
 }
