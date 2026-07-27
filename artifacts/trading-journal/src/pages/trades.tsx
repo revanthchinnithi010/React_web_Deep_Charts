@@ -369,44 +369,39 @@ function FilterBottomSheet({
     </p>
   );
 
-  if (!open) return null;
-
+  // Always render in the DOM — CSS handles show/hide (no unmount/remount lag)
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            key="fs-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={onClose}
-            style={{
-              position: "fixed", inset: 0, zIndex: 400,
-              background: "rgba(0,0,0,0.72)",
-            }}
-          />
+    <>
+      {/* Backdrop — CSS opacity transition */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, zIndex: 400,
+          background: "rgba(0,0,0,0.72)",
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity 0.24s ease",
+        }}
+      />
 
-          {/* Sheet */}
-          <motion.div
-            key="fs-sheet"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 340, mass: 0.9 }}
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 401,
-              background: "#0d0f13",
-              borderTop: "1px solid rgba(255,255,255,0.09)",
-              borderRadius: "20px 20px 0 0",
-              boxShadow: "0 -16px 64px rgba(0,0,0,0.85)",
-              paddingBottom: "max(env(safe-area-inset-bottom, 16px), 16px)",
-              display: "flex", flexDirection: "column",
-            }}
-          >
+      {/* Sheet — CSS transform transition, GPU-composited */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 401,
+          background: "#0d0f13",
+          borderTop: "1px solid rgba(255,255,255,0.09)",
+          borderRadius: "20px 20px 0 0",
+          boxShadow: "0 -16px 64px rgba(0,0,0,0.85)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 16px), 16px)",
+          display: "flex", flexDirection: "column",
+          transform: open ? "translateY(0)" : "translateY(100%)",
+          transition: "transform 0.32s cubic-bezier(0.32,0.72,0,1)",
+          willChange: "transform",
+          // Keep it in the a11y tree only when open
+          visibility: open ? "visible" : "hidden",
+        }}
+      >
             {/* Handle pill */}
             <div style={{ display: "flex", justifyContent: "center", paddingTop: 10, paddingBottom: 4 }}>
               <div style={{ width: 36, height: 4, borderRadius: 9999, background: "rgba(255,255,255,0.18)" }} />
@@ -527,32 +522,25 @@ function FilterBottomSheet({
                   })}
                 </div>
 
-                {/* Calendar — slides in when an input is active */}
-                <AnimatePresence>
-                  {activeInput && (
-                    <motion.div
-                      key="range-cal"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      style={{ overflow: "hidden" }}
-                    >
-                      {/* Hint */}
-                      <p style={{ fontSize: 11, color: "rgba(148,163,184,0.45)", marginBottom: 8, marginTop: 2 }}>
-                        {activeInput === "from" ? "Tap a start date" : "Tap an end date"}
-                      </p>
-                      <div style={{ padding: "10px 6px 8px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                        <MiniRangePicker
-                          from={draftDateFrom}
-                          to={draftDateTo}
-                          activeInput={activeInput}
-                          onSelect={handleDateSelect}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* Calendar — CSS max-height expand, no layout thrashing */}
+                <div style={{
+                  maxHeight: activeInput ? "320px" : "0px",
+                  overflow: "hidden",
+                  opacity: activeInput ? 1 : 0,
+                  transition: "max-height 0.22s ease, opacity 0.18s ease",
+                }}>
+                  <p style={{ fontSize: 11, color: "rgba(148,163,184,0.45)", marginBottom: 8, marginTop: 2 }}>
+                    {activeInput === "from" ? "Tap a start date" : "Tap an end date"}
+                  </p>
+                  <div style={{ padding: "10px 6px 8px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <MiniRangePicker
+                      from={draftDateFrom}
+                      to={draftDateTo}
+                      activeInput={activeInput ?? "from"}
+                      onSelect={handleDateSelect}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -588,12 +576,10 @@ function FilterBottomSheet({
                 Apply
               </button>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>,
-    document.body,
-  );
+          </div>
+        </>,
+        document.body,
+      );
 }
 
 const modalOverlayVariants = {
