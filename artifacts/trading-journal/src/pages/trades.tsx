@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   useListTrades,
@@ -287,6 +287,18 @@ function FilterBottomSheet({
   const [draftDateTo,   setDraftDateTo]   = useState(dateTo);
   const [activeInput,   setActiveInput]   = useState<"from" | "to" | null>(null);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const calendarAnchorRef  = useRef<HTMLDivElement>(null);
+
+  // Scroll calendar into view whenever it opens (after the grid-rows transition starts)
+  useEffect(() => {
+    if (!activeInput) return;
+    const id = setTimeout(() => {
+      calendarAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 60); // slight delay so the grid expand has begun
+    return () => clearTimeout(id);
+  }, [activeInput]);
+
   // Sync draft when sheet opens
   const prevOpenRef = useState(false);
   if (prevOpenRef[0] !== open) {
@@ -429,7 +441,7 @@ function FilterBottomSheet({
             </div>
 
             {/* Filter groups — scrollable */}
-            <div style={{
+            <div ref={scrollContainerRef} style={{
               flex: 1, overflowY: "auto", overflowX: "hidden",
               padding: "18px 18px 8px",
               display: "flex", flexDirection: "column", gap: 20,
@@ -488,7 +500,7 @@ function FilterBottomSheet({
                 </div>
 
                 {/* From / To tap inputs */}
-                <div style={{ display: "flex", gap: 8, marginBottom: activeInput ? 10 : 0 }}>
+                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                   {(["from", "to"] as const).map(slot => {
                     const val   = slot === "from" ? draftDateFrom : draftDateTo;
                     const label = slot === "from" ? "From" : "To";
@@ -522,23 +534,25 @@ function FilterBottomSheet({
                   })}
                 </div>
 
-                {/* Calendar — CSS max-height expand, no layout thrashing */}
-                <div style={{
-                  maxHeight: activeInput ? "320px" : "0px",
-                  overflow: "hidden",
+                {/* Calendar — grid-template-rows expand (GPU-composited, no layout reflow) */}
+                <div ref={calendarAnchorRef} style={{
+                  display: "grid",
+                  gridTemplateRows: activeInput ? "1fr" : "0fr",
                   opacity: activeInput ? 1 : 0,
-                  transition: "max-height 0.22s ease, opacity 0.18s ease",
+                  transition: "grid-template-rows 0.22s ease, opacity 0.18s ease",
                 }}>
-                  <p style={{ fontSize: 11, color: "rgba(148,163,184,0.45)", marginBottom: 8, marginTop: 2 }}>
-                    {activeInput === "from" ? "Tap a start date" : "Tap an end date"}
-                  </p>
-                  <div style={{ padding: "10px 6px 8px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    <MiniRangePicker
-                      from={draftDateFrom}
-                      to={draftDateTo}
-                      activeInput={activeInput ?? "from"}
-                      onSelect={handleDateSelect}
-                    />
+                  <div style={{ overflow: "hidden" }}>
+                    <p style={{ fontSize: 11, color: "rgba(148,163,184,0.45)", marginBottom: 8, marginTop: 2 }}>
+                      {activeInput === "from" ? "Tap a start date" : "Tap an end date"}
+                    </p>
+                    <div style={{ padding: "10px 6px 8px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <MiniRangePicker
+                        from={draftDateFrom}
+                        to={draftDateTo}
+                        activeInput={activeInput ?? "from"}
+                        onSelect={handleDateSelect}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
