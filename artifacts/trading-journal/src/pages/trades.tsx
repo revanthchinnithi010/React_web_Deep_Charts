@@ -651,7 +651,7 @@ const AddTradeSheet = memo(function AddTradeSheet({
         onClick={e => e.stopPropagation()}
         style={{
           position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 501,
-          background: "#0d0f13",
+          background: "#000000",
           borderTop: "1px solid rgba(255,255,255,0.09)",
           borderRadius: "20px 20px 0 0",
           boxShadow: "0 -16px 64px rgba(0,0,0,0.85)",
