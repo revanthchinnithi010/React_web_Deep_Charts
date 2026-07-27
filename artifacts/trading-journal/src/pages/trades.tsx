@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { DayPicker, type DateRange } from "react-day-picker";
 import { createPortal } from "react-dom";
 import {
   useListTrades,
@@ -127,6 +126,160 @@ function FilterPill({
     >
       {label}
     </button>
+  );
+}
+
+// ── MiniRangePicker — compact inline date-range calendar ─────────────────
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function MiniRangePicker({
+  from, to, onChange,
+}: {
+  from: string; // YYYY-MM-DD or ""
+  to: string;   // YYYY-MM-DD or ""
+  onChange: (from: string, to: string) => void;
+}) {
+  const today = new Date();
+  const [viewYear,  setViewYear]  = useState(() => today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => today.getMonth());
+
+  const fromDate = from ? new Date(from + "T00:00:00") : null;
+  const toDate   = to   ? new Date(to   + "T00:00:00") : null;
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  // Build calendar grid
+  const firstDay  = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+  const daysInMon = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMon }, (_, i) => i + 1),
+  ];
+  // Pad to full weeks
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const toYMD = (y: number, m: number, d: number) =>
+    `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  const handleDay = (day: number) => {
+    const clicked = toYMD(viewYear, viewMonth, day);
+    if (!from || (from && to)) {
+      // Start fresh range
+      onChange(clicked, "");
+    } else {
+      // Second click — order from/to
+      if (clicked < from) onChange(clicked, from);
+      else                 onChange(from, clicked);
+    }
+  };
+
+  const isFrom   = (d: number) => toYMD(viewYear, viewMonth, d) === from;
+  const isTo     = (d: number) => toYMD(viewYear, viewMonth, d) === to;
+  const inRange  = (d: number) => {
+    if (!fromDate || !toDate) return false;
+    const t = new Date(viewYear, viewMonth, d).getTime();
+    return t > fromDate.getTime() && t < toDate.getTime();
+  };
+  const isToday  = (d: number) => d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+
+  const COL = `${100 / 7}%`;
+
+  return (
+    <div style={{ userSelect: "none" }}>
+      {/* Month nav header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <button
+          type="button" onClick={prevMonth}
+          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}
+        >‹</button>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>
+          {MONTHS[viewMonth]} {viewYear}
+        </span>
+        <button
+          type="button" onClick={nextMonth}
+          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}
+        >›</button>
+      </div>
+
+      {/* Weekday row */}
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${COL})`, marginBottom: 4 }}>
+        {WEEKDAYS.map(d => (
+          <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "rgba(148,163,184,0.4)", paddingBottom: 4, letterSpacing: "0.04em" }}>{d}</div>
+        ))}
+      </div>
+
+      {/* Day grid */}
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${COL})`, gap: "2px 0" }}>
+        {cells.map((day, idx) => {
+          if (!day) return <div key={idx} />;
+          const start  = isFrom(day);
+          const end    = isTo(day);
+          const middle = inRange(day);
+          const todayC = isToday(day);
+
+          let bg = "transparent";
+          let color = todayC ? "#fff" : "rgba(255,255,255,0.72)";
+          let fontWeight: number = todayC ? 700 : 400;
+          let borderRadius = "8px";
+
+          if (start || end) {
+            bg = "rgba(255,255,255,0.92)";
+            color = "#0a0a0f";
+            fontWeight = 700;
+            borderRadius = start && to  ? (end ? "8px" : "8px 0 0 8px")
+                         : end  && from ? "0 8px 8px 0"
+                         : "8px";
+          } else if (middle) {
+            bg = "rgba(255,255,255,0.10)";
+            borderRadius = "0";
+          }
+
+          return (
+            <div key={idx} style={{ position: "relative", height: 34, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {/* Range fill band (full-width, behind circle) */}
+              {middle && (
+                <div style={{ position: "absolute", inset: "4px 0", background: "rgba(255,255,255,0.08)", zIndex: 0 }} />
+              )}
+              {start && to && (
+                <div style={{ position: "absolute", top: 4, bottom: 4, left: "50%", right: 0, background: "rgba(255,255,255,0.08)", zIndex: 0 }} />
+              )}
+              {end && from && (
+                <div style={{ position: "absolute", top: 4, bottom: 4, left: 0, right: "50%", background: "rgba(255,255,255,0.08)", zIndex: 0 }} />
+              )}
+              <button
+                type="button"
+                onClick={() => handleDay(day)}
+                style={{
+                  position: "relative", zIndex: 1,
+                  width: 30, height: 30,
+                  borderRadius: (start || end) ? "50%" : "6px",
+                  background: (start || end) ? bg : "transparent",
+                  border: "none",
+                  color,
+                  fontWeight,
+                  fontSize: 12.5,
+                  cursor: "pointer",
+                  transition: "background 0.12s",
+                  outline: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: todayC && !start && !end ? "inset 0 0 0 1px rgba(255,255,255,0.25)" : "none",
+                }}
+              >
+                {day}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -356,58 +509,27 @@ function FilterBottomSheet({
                     </button>
                   )}
                 </div>
-                {/* Selected range summary */}
-                {(draftDateFrom || draftDateTo) && (
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 6, marginBottom: 10,
-                    padding: "6px 10px", borderRadius: 8,
-                    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-                  }}>
-                    <span style={{ fontSize: 12, color: "#f1f5f9", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
-                      {draftDateFrom ? new Date(draftDateFrom + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
-                    </span>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>→</span>
-                    <span style={{ fontSize: 12, color: "#f1f5f9", fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
-                      {draftDateTo ? new Date(draftDateTo + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—"}
-                    </span>
-                  </div>
-                )}
-                {/* Compact inline range picker */}
-                <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <DayPicker
-                    mode="range"
-                    selected={{
-                      from: draftDateFrom ? new Date(draftDateFrom + "T00:00:00") : undefined,
-                      to:   draftDateTo   ? new Date(draftDateTo   + "T00:00:00") : undefined,
-                    }}
-                    onSelect={(range: DateRange | undefined) => {
-                      setDraftDateFrom(range?.from ? range.from.toISOString().slice(0, 10) : "");
-                      setDraftDateTo(  range?.to   ? range.to.toISOString().slice(0, 10)   : "");
-                    }}
-                    style={{ "--cell-size": "34px" } as React.CSSProperties}
-                    classNames={{
-                      root:           "w-full select-none",
-                      months:         "w-full",
-                      month:          "w-full",
-                      month_caption:  "flex items-center justify-center h-8 px-8 mb-1",
-                      caption_label:  "text-[13px] font-semibold text-white/80",
-                      nav:            "absolute inset-x-0 top-0 flex items-center justify-between px-1 h-8",
-                      button_previous:"flex items-center justify-center w-7 h-7 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors",
-                      button_next:    "flex items-center justify-center w-7 h-7 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors",
-                      weekdays:       "flex mb-1",
-                      weekday:        "flex-1 text-center text-[10px] font-semibold text-white/25 uppercase",
-                      weeks:          "w-full",
-                      week:           "flex w-full",
-                      day:            "flex-1 flex items-center justify-center p-0",
-                      day_button:     "w-full h-[--cell-size] text-[12px] font-medium text-white/70 hover:bg-white/10 hover:text-white rounded-md transition-colors",
-                      today:          "text-white font-bold",
-                      outside:        "opacity-25",
-                      disabled:       "opacity-20 cursor-not-allowed",
-                      range_start:    "bg-white/20 rounded-l-md rounded-r-none",
-                      range_middle:   "bg-white/10 rounded-none",
-                      range_end:      "bg-white/20 rounded-r-md rounded-l-none",
-                      selected:       "bg-white text-black rounded-md font-bold",
-                    }}
+                {/* Selected range summary pill */}
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 6, marginBottom: 10,
+                  padding: "7px 10px", borderRadius: 8,
+                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
+                  minHeight: 34,
+                }}>
+                  <span style={{ fontSize: 12, color: draftDateFrom ? "#f1f5f9" : "rgba(148,163,184,0.35)", fontWeight: 500 }}>
+                    {draftDateFrom ? new Date(draftDateFrom + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Start date"}
+                  </span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", flex: 1, textAlign: "center" }}>→</span>
+                  <span style={{ fontSize: 12, color: draftDateTo ? "#f1f5f9" : "rgba(148,163,184,0.35)", fontWeight: 500 }}>
+                    {draftDateTo ? new Date(draftDateTo + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "End date"}
+                  </span>
+                </div>
+                {/* Compact inline calendar */}
+                <div style={{ padding: "10px 4px 4px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <MiniRangePicker
+                    from={draftDateFrom}
+                    to={draftDateTo}
+                    onChange={(f, t) => { setDraftDateFrom(f); setDraftDateTo(t); }}
                   />
                 </div>
               </div>
