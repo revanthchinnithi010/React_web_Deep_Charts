@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, memo, useCallback } from "react";
+import { useState, useMemo, useEffect, useLayoutEffect, useRef, memo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   useListTrades,
@@ -299,17 +299,37 @@ function FilterBottomSheet({
     return () => clearTimeout(id);
   }, [activeInput]);
 
-  // Sync draft state when sheet opens.
-  // Previously this used a render-phase setState pattern (calling setState
-  // during render via a misused useState "ref"). That caused React to discard
-  // the in-progress render and immediately re-render 6 times — firing the CSS
-  // translateY transition twice in quick succession and producing the
-  // flicker / sudden-close bug when reopening after a date-range apply.
-  // useEffect fires AFTER the commit, so the slide-up animation plays
-  // correctly first, then draft state is synced in one batched re-render.
-  // Deps intentionally omit the filter props — we only want to sync when
-  // `open` changes (on open), not on every parent filter-prop change (which
-  // would clobber in-progress draft edits).
+  // ── Sheet-open lifecycle ──────────────────────────────────────────────────
+
+  // 1. Reset scroll position BEFORE the first paint when the sheet opens.
+  //
+  // Root cause of the "suddenly closed / flickering" bug:
+  //   When the user opens the date-range calendar, scrollIntoView() moves the
+  //   sheet's inner scroll container down to show the calendar. After they
+  //   select both dates and tap Apply, the sheet closes — but the scrollTop
+  //   is preserved (the component is always mounted; only CSS shows/hides it).
+  //   The next time the sheet opens, the scroll container starts at that old
+  //   offset: the filter chips (Outcome / Side / Broker / Range inputs) are
+  //   scrolled off the TOP of the viewport, and the visible area shows only
+  //   empty space below the collapsed calendar — exactly the "blank / suddenly
+  //   closed" appearance the user reported.
+  //
+  // useLayoutEffect fires synchronously after DOM commit but BEFORE the browser
+  // paints, so the scroll is corrected in the same frame the sheet starts
+  // sliding up. The user never sees the stale scroll position.
+  // No setState here — pure DOM mutation — so no extra React render is triggered.
+  useLayoutEffect(() => {
+    if (!open) return;
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+  }, [open]);
+
+  // 2. Sync draft filter values when the sheet opens (after commit).
+  //
+  // useEffect (not useLayoutEffect) intentionally — these are React state
+  // updates, and scheduling them after the paint means the slide-up CSS
+  // transition plays correctly before any draft re-render happens.
+  // Deps intentionally omit the filter props: sync only on open, not on every
+  // parent filter change (which would clobber in-progress draft edits).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!open) return;
@@ -320,6 +340,21 @@ function FilterBottomSheet({
     setDraftDateTo(dateTo);
     setActiveInput(null);
   }, [open]); // ← only `open` is intentional; see comment above
+
+  // 3. After the close animation finishes, reset activeInput and scroll as a
+  //    safety net — covers the case where the user closed without selecting
+  //    both dates (activeInput still "from"/"to") or navigated away while the
+  //    sheet was open. The 360ms delay is the 320ms CSS close transition + a
+  //    small buffer. If the sheet reopens before this fires, the cleanup
+  //    cancels the timeout and step 1+2 above handle the reset on open.
+  useEffect(() => {
+    if (open) return;
+    const id = setTimeout(() => {
+      setActiveInput(null);
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
+    }, 360);
+    return () => clearTimeout(id);
+  }, [open]);
 
   const handleReset = () => {
     setDraftOutcome("all");
