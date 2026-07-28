@@ -299,19 +299,27 @@ function FilterBottomSheet({
     return () => clearTimeout(id);
   }, [activeInput]);
 
-  // Sync draft when sheet opens
-  const prevOpenRef = useState(false);
-  if (prevOpenRef[0] !== open) {
-    prevOpenRef[1](open);
-    if (open) {
-      setDraftOutcome(outcomeFilter);
-      setDraftSide(sideFilter);
-      setDraftBroker(brokerFilter);
-      setDraftDateFrom(dateFrom);
-      setDraftDateTo(dateTo);
-      setActiveInput(null);
-    }
-  }
+  // Sync draft state when sheet opens.
+  // Previously this used a render-phase setState pattern (calling setState
+  // during render via a misused useState "ref"). That caused React to discard
+  // the in-progress render and immediately re-render 6 times — firing the CSS
+  // translateY transition twice in quick succession and producing the
+  // flicker / sudden-close bug when reopening after a date-range apply.
+  // useEffect fires AFTER the commit, so the slide-up animation plays
+  // correctly first, then draft state is synced in one batched re-render.
+  // Deps intentionally omit the filter props — we only want to sync when
+  // `open` changes (on open), not on every parent filter-prop change (which
+  // would clobber in-progress draft edits).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!open) return;
+    setDraftOutcome(outcomeFilter);
+    setDraftSide(sideFilter);
+    setDraftBroker(brokerFilter);
+    setDraftDateFrom(dateFrom);
+    setDraftDateTo(dateTo);
+    setActiveInput(null);
+  }, [open]); // ← only `open` is intentional; see comment above
 
   const handleReset = () => {
     setDraftOutcome("all");
