@@ -55,63 +55,65 @@ const RUBBER_BAND_JS = `
     return s * MAX_PX * (1 - Math.exp(-Math.abs(raw) / MAX_PX));
   }
 
-  // Read the current translateY from an element's inline style
+  // Read the current translateY — inline style during drag, computed matrix
+  // during a CSS transition (mid-flight cancellation).
   function getY(el) {
     var m = el.style.transform && el.style.transform.match(/translateY\\(([-.\\d]+)px\\)/);
-    return m ? parseFloat(m[1]) : 0;
+    if (m) return parseFloat(m[1]);
+    var t = window.getComputedStyle(el).transform;
+    if (!t || t === 'none') return 0;
+    var parts = t.match(/matrix.*\\((.+)\\)/);
+    return parts ? parseFloat(parts[1].split(', ')[5] || '0') : 0;
   }
 
-  // Spring physics — animates el.style.transform back to translateY(0)
-  // Returns a cancel function.
+  // Cancel any in-progress animation and freeze at the current painted position.
+  // Must be called before starting a new animation on the same element.
+  function freeze(el) {
+    if (el._rbRaf)   { cancelAnimationFrame(el._rbRaf);  el._rbRaf   = null; }
+    if (el._rbTimer) { clearTimeout(el._rbTimer);        el._rbTimer = null; }
+    var y = getY(el);
+    el.style.transition = 'none';
+    el.style.transform  = y ? 'translateY(' + y + 'px)' : '';
+  }
+
+  // CSS ease-out spring back — no overshoot, exact rubber-band feel.
+  // cubic-bezier(0.22,1,0.36,1) is an expo-out curve: starts fast,
+  // decelerates strongly, never crosses zero → no ball-bounce artefact.
   function springBack(el) {
-    if (el._rbCancel) { el._rbCancel(); }
-    var pos = getY(el);
-    var vel = 0;
-    var TENSION = 220;
-    var FRICTION = 26;
-    var raf;
-    var stopped = false;
-
-    el._rbCancel = function() { stopped = true; cancelAnimationFrame(raf); el._rbCancel = null; };
-
-    function step() {
-      if (stopped) return;
-      vel += (-TENSION * pos - FRICTION * vel) / 1000;
-      pos += vel;
-      if (Math.abs(pos) < 0.08 && Math.abs(vel) < 0.08) {
-        el.style.transform = '';
-        el._rbCancel = null;
-        return;
-      }
-      el.style.transform = 'translateY(' + pos + 'px)';
-      raf = requestAnimationFrame(step);
-    }
-    raf = requestAnimationFrame(step);
+    freeze(el);
+    // Two rAF ticks let the browser commit `transition:none` before we
+    // set the new transition, otherwise the two writes collapse into one
+    // style recalc and the animation is skipped entirely.
+    el._rbRaf = requestAnimationFrame(function() {
+      el._rbRaf = requestAnimationFrame(function() {
+        el._rbRaf = null;
+        el.style.transition = 'transform 0.42s cubic-bezier(0.22,1,0.36,1)';
+        el.style.transform  = '';
+        el._rbTimer = setTimeout(function() {
+          el._rbTimer = null;
+          el.style.transition = '';
+        }, 440);
+      });
+    });
   }
 
-  // Ease-out to a target offset then spring back to 0
+  // rAF-based ease-out to `target`, then hand off to springBack.
+  // Used for the momentum bounce-out phase only.
   function bounceOut(el, target, duration) {
-    if (el._rbCancel) { el._rbCancel(); }
-    var start    = getY(el);
-    var startTs  = null;
-    var raf;
-    var stopped  = false;
+    freeze(el);
+    var start   = getY(el);
+    var startTs = null;
 
-    el._rbCancel = function() { stopped = true; cancelAnimationFrame(raf); el._rbCancel = null; };
+    function easeOutQuad(t) { return 1 - (1-t)*(1-t); }
 
     function step(ts) {
-      if (stopped) return;
       if (!startTs) startTs = ts;
       var t = Math.min((ts - startTs) / duration, 1);
-      var ease = 1 - Math.pow(1 - t, 2); // ease-out quad
-      el.style.transform = 'translateY(' + (start + (target - start) * ease) + 'px)';
-      if (t < 1) {
-        raf = requestAnimationFrame(step);
-      } else {
-        springBack(el);
-      }
+      el.style.transform = 'translateY(' + (start + (target - start) * easeOutQuad(t)) + 'px)';
+      if (t < 1) { el._rbRaf = requestAnimationFrame(step); }
+      else        { el._rbRaf = null; springBack(el); }
     }
-    raf = requestAnimationFrame(step);
+    el._rbRaf = requestAnimationFrame(step);
   }
 
   // Walk up the DOM to find the nearest overflow:auto/scroll ancestor
