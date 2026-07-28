@@ -287,6 +287,96 @@ const PNL_NODE = (
   </Suspense>
 );
 
+/**
+ * Markets keep-alive — same pattern as DashboardKeepAlive / ReportsKeepAlive.
+ * Markets manages its own full-height flex layout internally (no StandardPageWrapper).
+ * Keeping it mounted means navigating to "/markets" is an instant display:flex
+ * toggle — no lazy-chunk suspension, no blank flash, no data re-fetch on every visit.
+ */
+function MarketsKeepAlive() {
+  return <Markets />;
+}
+
+function MarketsPreload() {
+  const [location] = useLocation();
+  const onRoute = location.split("?")[0] === "/markets";
+  const [ready, setReady] = useState(onRoute);
+  useEffect(() => {
+    if (ready) return;
+    const id = setTimeout(() => setReady(true), 200);
+    return () => clearTimeout(id);
+  }, [ready]);
+  if (!ready && !onRoute) return null;
+  return <MarketsKeepAlive />;
+}
+
+const MARKETS_NODE = (
+  <Suspense fallback={null}>
+    <MarketsPreload />
+  </Suspense>
+);
+
+/**
+ * Trades keep-alive — same pattern as Markets. Trades has its own secondary
+ * header and manages its own layout, so no StandardPageWrapper wrapper needed.
+ */
+function TradesKeepAlive() {
+  return <Trades />;
+}
+
+function TradesPreload() {
+  const [location] = useLocation();
+  const onRoute = location.split("?")[0] === "/trades";
+  const [ready, setReady] = useState(onRoute);
+  useEffect(() => {
+    if (ready) return;
+    const id = setTimeout(() => setReady(true), 300);
+    return () => clearTimeout(id);
+  }, [ready]);
+  if (!ready && !onRoute) return null;
+  return <TradesKeepAlive />;
+}
+
+const TRADES_NODE = (
+  <Suspense fallback={null}>
+    <TradesPreload />
+  </Suspense>
+);
+
+/**
+ * Alerts keep-alive — same pattern as Markets/Trades. Alerts uses
+ * StandardPageWrapper for its scroll container (same as Brokers, Calendar, etc).
+ * isMobile read here (not in Router) so element identity never changes.
+ */
+function AlertsKeepAlive() {
+  const isMobile = useIsMobile();
+  const bp = isMobile ? 80 : 40;
+  return (
+    <StandardPageWrapper bottomPad={bp} pathname="/alerts">
+      <Alerts />
+    </StandardPageWrapper>
+  );
+}
+
+function AlertsPreload() {
+  const [location] = useLocation();
+  const onRoute = location.split("?")[0] === "/alerts";
+  const [ready, setReady] = useState(onRoute);
+  useEffect(() => {
+    if (ready) return;
+    const id = setTimeout(() => setReady(true), 400);
+    return () => clearTimeout(id);
+  }, [ready]);
+  if (!ready && !onRoute) return null;
+  return <AlertsKeepAlive />;
+}
+
+const ALERTS_NODE = (
+  <Suspense fallback={null}>
+    <AlertsPreload />
+  </Suspense>
+);
+
 // ── Header-sync path sets ────────────────────────────────────────────────
 // Used by Router to compute the deferred headerVisible prop passed to Layout.
 // Must stay in sync with NO_HEADER_PATHS_LAYOUT in layout.tsx.
@@ -305,7 +395,7 @@ const APP_NO_HEADER_PATHS = new Set([
  * AnimatePresence exit animation to wait for, so the header update must be
  * applied immediately (cannot rely on onExitComplete, which won't fire).
  */
-const APP_KEEP_ALIVE_PATHS = new Set(["/", "/charts", "/reports", "/pnl"]);
+const APP_KEEP_ALIVE_PATHS = new Set(["/", "/charts", "/reports", "/pnl", "/markets", "/trades", "/alerts"]);
 
 /**
  * Cover-detail pages — rendered as position:fixed inset:0 zIndex:50 overlays
@@ -578,7 +668,7 @@ function Router() {
   return (
     // Charts is the only keep-alive node — its LWC chart instance must survive
     // tab switches. Every other page mounts fresh and unmounts on navigation.
-    <Layout chartsNode={CHARTS_NODE} dashboardNode={DASHBOARD_NODE} reportsNode={REPORTS_NODE} pnlNode={PNL_NODE} headerVisible={headerVisible}>
+    <Layout chartsNode={CHARTS_NODE} dashboardNode={DASHBOARD_NODE} reportsNode={REPORTS_NODE} pnlNode={PNL_NODE} marketsNode={MARKETS_NODE} tradesNode={TRADES_NODE} alertsNode={ALERTS_NODE} headerVisible={headerVisible}>
       {/*
         ── Single AnimatePresence (mode="wait") ────────────────────────────
         All pages — tab pages, sidebar pages, detail pages — live in ONE
@@ -615,12 +705,14 @@ function Router() {
       */}
       <AnimatePresence mode="wait" custom={dir} initial={false} onExitComplete={handleExitComplete}>
         {/* ── Tab pages — direction-aware fade-shift ──
-             Dashboard ("/") is intentionally NOT rendered here — it is a
-             permanently-mounted keep-alive node (see DASHBOARD_NODE / Layout),
-             exactly like Charts. It never enters/exits this AnimatePresence. */}
-        {pathname === "/markets" && <Suspense key="/markets" fallback={<PageLoader />}><PageTransition key="/markets" variant="tab" custom={dir}><Markets /></PageTransition></Suspense>}
-        {pathname === "/trades"  && <Suspense key="/trades"  fallback={<PageLoader />}><PageTransition key="/trades"  variant="tab" custom={dir}><Trades    /></PageTransition></Suspense>}
-        {pathname === "/alerts"  && <Suspense key="/alerts"  fallback={<PageLoader />}><PageTransition key="/alerts"  variant="tab" custom={dir}><StandardPageWrapper bottomPad={bp} pathname="/alerts"><Alerts    /></StandardPageWrapper></PageTransition></Suspense>}
+             Dashboard ("/"), Markets ("/markets"), Trades ("/trades"), and
+             Alerts ("/alerts") are intentionally NOT rendered here — they are
+             permanently-mounted keep-alive nodes (see DASHBOARD_NODE /
+             MARKETS_NODE / TRADES_NODE / ALERTS_NODE in Layout), exactly like
+             Charts and Reports. They never enter/exit this AnimatePresence;
+             switching to them is an instant display:flex toggle on an already
+             fully-rendered tree — no lazy-chunk suspension, no blank flash,
+             no data re-fetch on every tab visit. */}
 
         {/* ── Sidebar / utility pages — fade + slide-up ──
              /reports is intentionally NOT branched here — it is a

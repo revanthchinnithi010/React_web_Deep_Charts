@@ -393,6 +393,9 @@ export const Layout = memo(function Layout({
   dashboardNode,
   reportsNode,
   pnlNode,
+  marketsNode,
+  tradesNode,
+  alertsNode,
   headerVisible: headerVisibleProp,
 }: {
   children:          React.ReactNode;
@@ -400,6 +403,9 @@ export const Layout = memo(function Layout({
   dashboardNode?:    React.ReactNode;
   reportsNode?:      React.ReactNode;
   pnlNode?:          React.ReactNode;
+  marketsNode?:      React.ReactNode;
+  tradesNode?:       React.ReactNode;
+  alertsNode?:       React.ReactNode;
   /**
    * Pre-computed header visibility from App.tsx, synced to AnimatePresence's
    * onExitComplete so the header never changes while a page is still animating.
@@ -904,6 +910,52 @@ export const Layout = memo(function Layout({
             </div>
           )}
 
+          {/* Markets — keep-alive, same pattern as Dashboard/Charts.
+              Markets manages its own full-height flex layout internally.
+              Keeping it permanently mounted means switching to "/markets"
+              is an instant display:flex toggle — no lazy-chunk suspension,
+              no blank flash on first open in Expo Go / WebView. */}
+          {marketsNode && (
+            <div style={{
+              position:      "absolute",
+              inset:         0,
+              display:       pathname === "/markets" ? "flex" : "none",
+              flexDirection: "column",
+              overflow:      "hidden",
+            }}>
+              {marketsNode}
+            </div>
+          )}
+
+          {/* Trades — keep-alive, same pattern as Markets.
+              Trades has its own secondary header and manages its own layout. */}
+          {tradesNode && (
+            <div style={{
+              position:      "absolute",
+              inset:         0,
+              display:       pathname === "/trades" ? "flex" : "none",
+              flexDirection: "column",
+              overflow:      "hidden",
+            }}>
+              {tradesNode}
+            </div>
+          )}
+
+          {/* Alerts — keep-alive, same pattern as Markets/Trades.
+              AlertsKeepAlive wraps Alerts in StandardPageWrapper (scroll
+              container + padding), matching the previous AnimatePresence layout. */}
+          {alertsNode && (
+            <div style={{
+              position:      "absolute",
+              inset:         0,
+              display:       pathname === "/alerts" ? "flex" : "none",
+              flexDirection: "column",
+              overflow:      "hidden",
+            }}>
+              {alertsNode}
+            </div>
+          )}
+
           {/* All other pages — mounted/unmounted by AnimatePresence in App.tsx.
               The paddingBottom for the mobile nav bar is applied per-page in
               App.tsx via StandardPageWrapper or the page's own layout.
@@ -937,7 +989,7 @@ export const Layout = memo(function Layout({
             display:       "flex",
             flexDirection: "column",
             overflow:      "hidden",
-            pointerEvents: (pathname === "/" || pathname === "/charts" || pathname === "/reports" || pathname === "/pnl") ? "none" : "auto",
+            pointerEvents: (pathname === "/" || pathname === "/charts" || pathname === "/reports" || pathname === "/pnl" || pathname === "/markets" || pathname === "/trades" || pathname === "/alerts") ? "none" : "auto",
           }}>
             {children}
           </div>
