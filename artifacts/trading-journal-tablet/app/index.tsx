@@ -81,7 +81,7 @@ const RUBBER_BAND_JS = `
   // decelerates strongly, never crosses zero → no ball-bounce artefact.
   function springBack(el) {
     freeze(el);
-    // Two rAF ticks let the browser commit `transition:none` before we
+    // Two rAF ticks let the browser commit transition:none before we
     // set the new transition, otherwise the two writes collapse into one
     // style recalc and the animation is skipped entirely.
     el._rbRaf = requestAnimationFrame(function() {
