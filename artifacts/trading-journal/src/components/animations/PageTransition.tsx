@@ -6,26 +6,71 @@
  *
  * GPU-safe: opacity + transform (y) only — no scale, no x-slide.
  *
- * All variants share the same premium motion system: opacity 0.98→1 + 9px
- * translate-Y, 220ms smooth ease-out. The transition is almost imperceptible —
- * content materialises in place rather than performing a visible animation.
+ * Animation system:
+ *   Enter — opacity 0 → 1, translateY 8px → 0, 220ms easeOut
+ *   Exit  — opacity 1 → 0, translateY 0 → 8px, 180ms easeIn
+ *   Movement is kept under 10px so transitions feel nearly invisible.
  *
  * variant="page" | "tab" | "detail" | "slide"
  *   Standard premium enter/exit. `custom` is accepted but unused (kept for
  *   API compatibility with AnimatePresence).
  *
- * variant="cover-detail"
- *   Same motion but starts fully opaque so it immediately occludes Layout's
- *   header and any keep-alive content below (used for position:fixed overlays
- *   such as Portfolio, Balances, Net-PnL).
+ * variant="tab"
+ *   Pure opacity crossfade — no y translate. Tab pages sit inside a Layout
+ *   whose header height can change between tabs; any y offset would interact
+ *   with that height change and produce a visible positional artefact.
  *
- * By default (`fill=true`) variants use position:absolute;inset:0 so the page
- * fills the absolute container in Layout. Pass `fill={false}` for inner/nested
- * usage inside a scrollable container to keep the element in normal flow.
+ * variant="cover-detail"
+ *   Starts fully opaque at y:0 so the overlay immediately occludes the Layout
+ *   header and any keep-alive content below. A y offset on a position:fixed,
+ *   inset:0 element creates a viewport gap for the animation duration, which
+ *   exposes lower z-index elements and causes a header-collapse flash.
+ *
+ * By default (`fill=true`) the element uses position:absolute;inset:0 so the
+ * page fills the absolute container in Layout. Pass `fill={false}` for
+ * inner/nested usage inside a scrollable container to stay in normal flow.
  */
+import type { Variants } from "motion/react";
 import { motion } from "motion/react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { pageVariants, pageDetailVariants, pageDetailCoverVariants, tabPageVariants, pageSlideVariants } from "@/animations/motion";
+
+// ─── Timing & easing ──────────────────────────────────────────────────────────
+const EASE_OUT = [0.25, 0.46, 0.45, 0.94] as const; // smooth deceleration
+const EASE_IN  = [0.4,  0,    1,    1   ] as const; // smooth acceleration
+
+const ENTER: object = { type: "tween", duration: 0.22, ease: EASE_OUT };
+const EXIT:  object = { type: "tween", duration: 0.18, ease: EASE_IN  };
+
+// ─── Page variants ────────────────────────────────────────────────────────────
+
+/** Standard pages — fade + 8px vertical slide. */
+const pageVariants: Variants = {
+  initial: { opacity: 0, y: 8  },
+  enter:   { opacity: 1, y: 0, transition: ENTER },
+  exit:    { opacity: 0, y: 8, transition: EXIT  },
+};
+
+/**
+ * Tab pages — opacity crossfade only, no y translate.
+ * Prevents positional artefacts caused by header height changes between tabs.
+ */
+const tabPageVariants: Variants = {
+  initial: { opacity: 0 },
+  enter:   { opacity: 1, transition: ENTER },
+  exit:    { opacity: 0, transition: EXIT  },
+};
+
+/**
+ * Cover-detail pages (position:fixed overlays such as Portfolio / Balances).
+ * Starts fully opaque at y:0 — no y offset on a viewport-filling fixed element.
+ */
+const pageDetailCoverVariants: Variants = {
+  initial: { opacity: 0.96, y: 0 },
+  enter:   { opacity: 1,    y: 0, transition: ENTER },
+  exit:    { opacity: 0,    y: 0, transition: EXIT  },
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface PageTransitionProps {
   children:   React.ReactNode;
@@ -44,15 +89,28 @@ interface PageTransitionProps {
 
 /** Base style applied when fill=true: stretches to fill the absolute container in Layout. */
 const BASE_STYLE: React.CSSProperties = {
-  position:    "absolute",
-  inset:        0,
-  willChange:  "transform, opacity",
+  position:   "absolute",
+  inset:       0,
+  willChange: "transform, opacity",
 };
 
-export function PageTransition({ children, className, style, variant = "page", custom, fill = true }: PageTransitionProps) {
+const INLINE_STYLE: React.CSSProperties = {
+  willChange: "transform, opacity",
+};
+
+export function PageTransition({
+  children,
+  className,
+  style,
+  variant = "page",
+  custom,
+  fill = true,
+}: PageTransitionProps) {
   const reduced = useReducedMotion();
 
-  const combinedStyle = fill ? { ...BASE_STYLE, ...style } : { willChange: "transform, opacity", ...style };
+  const combinedStyle = fill
+    ? { ...BASE_STYLE,   ...style }
+    : { ...INLINE_STYLE, ...style };
 
   if (reduced) {
     return (
@@ -63,11 +121,9 @@ export function PageTransition({ children, className, style, variant = "page", c
   }
 
   const variants =
-    variant === "tab"          ? tabPageVariants          :
-    variant === "detail"       ? pageDetailVariants       :
-    variant === "cover-detail" ? pageDetailCoverVariants  :
-    variant === "slide"        ? pageSlideVariants        :
-                                 pageVariants;
+    variant === "tab"          ? tabPageVariants         :
+    variant === "cover-detail" ? pageDetailCoverVariants :
+                                 pageVariants;            // page | detail | slide
 
   return (
     <motion.div
