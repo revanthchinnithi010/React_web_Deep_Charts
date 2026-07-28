@@ -1,8 +1,6 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
-  Animated,
-  Easing,
   ActivityIndicator,
   Platform,
   StyleSheet,
@@ -11,7 +9,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import WebView, { WebViewMessageEvent } from "react-native-webview";
+import WebView from "react-native-webview";
 
 // Guard against Metro injecting the literal string "undefined" when the env
 // var was not set at bundle time, and against an empty string.
@@ -24,125 +22,195 @@ const TABLET_UA =
   "AppleWebKit/537.36 (KHTML, like Gecko) " +
   "Chrome/120.0.6099.230 Safari/537.36";
 
-// ── Rubber-band injected script ────────────────────────────────────────────
+// ── Rubber-band script (runs inside the WebView) ───────────────────────────
 //
-// Two separate mechanisms cover the two cases the user noticed:
+// Why JavaScript-only instead of Animated.View translateY on the RN side:
+//   Translating the WebView *frame* at the RN level moves every element in
+//   the page, including position:fixed header and bottom-nav — exactly what
+//   the user reported seeing.  Applying transform only to the scroll
+//   container div leaves all fixed/sticky chrome in place.
 //
-//  1. TOUCH DRAG at boundary  — touchmove fires when the user drags past the
-//     end of a scroll container.  We calculate the drag delta and send it so
-//     RN can apply a proportional (dampened) translateY in real time.
+// Two mechanisms:
+//   1. Touch-drag at boundary — touchmove fires while the user drags past the
+//      end of a scroll container.  We apply a logarithmic resistance curve
+//      directly via element.style.transform (no async round-trip to RN).
 //
-//  2. MOMENTUM hits boundary  — scroll events keep firing after the finger
-//     lifts during a fling.  We track velocity and, when a scroll container
-//     reaches its top/bottom edge with meaningful velocity, send a one-shot
-//     event so RN can play a spring-out/spring-back animation.
+//   2. Momentum hits boundary — scroll events continue after the finger lifts
+//      during a fling.  We track per-element velocity and play a bounce-out /
+//      spring-back animation via requestAnimationFrame when the container
+//      reaches its edge with significant speed.
 //
-// We skip the native WebView bounces (`bounces={false}`) intentionally so
-// there is no double-bounce (both native UIScrollView rubber-band AND our
-// Animated translateY running at the same time).
+// We keep bounces={false} / overScrollMode="never" so the native UIScrollView
+// never double-bounces alongside the JS animation.
 const RUBBER_BAND_JS = `
 (function() {
   if (window._rbInit) return;
   window._rbInit = true;
 
-  function post(obj) {
-    try { window.ReactNativeWebView.postMessage(JSON.stringify(obj)); } catch(e) {}
+  var MAX_PX = 72; // maximum rubber-band displacement
+
+  // Logarithmic resistance: responsive near 0, levels off at MAX_PX
+  function curve(raw) {
+    var s = raw > 0 ? 1 : -1;
+    return s * MAX_PX * (1 - Math.exp(-Math.abs(raw) / MAX_PX));
   }
 
-  // ── Nearest scrollable ancestor ────────────────────────────────────────
-  function getScrollParent(el) {
+  // Read the current translateY from an element's inline style
+  function getY(el) {
+    var m = el.style.transform && el.style.transform.match(/translateY\\(([-.\\d]+)px\\)/);
+    return m ? parseFloat(m[1]) : 0;
+  }
+
+  // Spring physics — animates el.style.transform back to translateY(0)
+  // Returns a cancel function.
+  function springBack(el) {
+    if (el._rbCancel) { el._rbCancel(); }
+    var pos = getY(el);
+    var vel = 0;
+    var TENSION = 220;
+    var FRICTION = 26;
+    var raf;
+    var stopped = false;
+
+    el._rbCancel = function() { stopped = true; cancelAnimationFrame(raf); el._rbCancel = null; };
+
+    function step() {
+      if (stopped) return;
+      vel += (-TENSION * pos - FRICTION * vel) / 1000;
+      pos += vel;
+      if (Math.abs(pos) < 0.08 && Math.abs(vel) < 0.08) {
+        el.style.transform = '';
+        el._rbCancel = null;
+        return;
+      }
+      el.style.transform = 'translateY(' + pos + 'px)';
+      raf = requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+  }
+
+  // Ease-out to a target offset then spring back to 0
+  function bounceOut(el, target, duration) {
+    if (el._rbCancel) { el._rbCancel(); }
+    var start    = getY(el);
+    var startTs  = null;
+    var raf;
+    var stopped  = false;
+
+    el._rbCancel = function() { stopped = true; cancelAnimationFrame(raf); el._rbCancel = null; };
+
+    function step(ts) {
+      if (stopped) return;
+      if (!startTs) startTs = ts;
+      var t = Math.min((ts - startTs) / duration, 1);
+      var ease = 1 - Math.pow(1 - t, 2); // ease-out quad
+      el.style.transform = 'translateY(' + (start + (target - start) * ease) + 'px)';
+      if (t < 1) {
+        raf = requestAnimationFrame(step);
+      } else {
+        springBack(el);
+      }
+    }
+    raf = requestAnimationFrame(step);
+  }
+
+  // Walk up the DOM to find the nearest overflow:auto/scroll ancestor
+  function scrollParent(el) {
     while (el && el !== document.body) {
-      var s = window.getComputedStyle(el);
-      if (/auto|scroll/.test(s.overflowY) && el.scrollHeight > el.clientHeight) return el;
+      var oy = window.getComputedStyle(el).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;
       el = el.parentElement;
     }
     return null;
   }
 
-  // ── 1. Touch-drag rubber band ──────────────────────────────────────────
-  var touchStartY = 0;
-  var activeEl    = null;
-  var isPulling   = false;
+  // ── 1. Touch-drag ──────────────────────────────────────────────────────────
+  var startY  = 0;
+  var active  = null;
+  var pulling = false;
 
   document.addEventListener('touchstart', function(e) {
-    touchStartY = e.touches[0].clientY;
-    activeEl    = getScrollParent(e.target);
-    isPulling   = false;
+    startY  = e.touches[0].clientY;
+    active  = scrollParent(e.target);
+    pulling = false;
   }, { passive: true });
 
   document.addEventListener('touchmove', function(e) {
-    if (!activeEl) return;
-    var dy       = e.touches[0].clientY - touchStartY;
-    var atTop    = activeEl.scrollTop <= 0;
-    var atBottom = activeEl.scrollTop + activeEl.clientHeight >= activeEl.scrollHeight - 1;
+    if (!active) return;
+    var dy      = e.touches[0].clientY - startY;
+    var atTop   = active.scrollTop <= 0;
+    var atBot   = active.scrollTop + active.clientHeight >= active.scrollHeight - 1;
 
-    if ((atTop && dy > 0) || (atBottom && dy < 0)) {
-      isPulling = true;
-      post({ type: 'rb_pull', delta: dy });
-    } else if (isPulling) {
-      isPulling = false;
-      post({ type: 'rb_release' });
+    if ((atTop && dy > 0) || (atBot && dy < 0)) {
+      if (active._rbCancel) { active._rbCancel(); }
+      pulling = true;
+      active.style.transform = 'translateY(' + curve(dy) + 'px)';
+    } else if (pulling) {
+      pulling = false;
+      springBack(active);
     }
   }, { passive: true });
 
   function onTouchEnd() {
-    if (isPulling) {
-      isPulling = false;
-      post({ type: 'rb_release' });
-    }
+    if (pulling && active) { pulling = false; springBack(active); }
+    pulling = false;
   }
   document.addEventListener('touchend',    onTouchEnd, { passive: true });
   document.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
-  // ── 2. Momentum rubber band ────────────────────────────────────────────
-  var attached = new WeakSet ? new WeakSet() : { has: function(){ return false; }, add: function(){} };
+  // ── 2. Momentum scroll hits boundary ──────────────────────────────────────
+  var tracked = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
 
-  function attachScrollVelocity(el) {
-    if (!el || attached.has(el)) return;
-    var s = window.getComputedStyle(el);
-    if (!/auto|scroll/.test(s.overflowY)) return;
+  function attachMomentum(el) {
+    if (!el) return;
+    if (tracked) { if (tracked.has(el)) return; } else { if (el._rbTracked) return; el._rbTracked = true; }
+    var oy = window.getComputedStyle(el).overflowY;
+    if (oy !== 'auto' && oy !== 'scroll') return;
     if (el.scrollHeight <= el.clientHeight) return;
-    attached.add(el);
+    if (tracked) tracked.add(el);
 
     var prevTop  = el.scrollTop;
     var prevTime = Date.now();
-    var velocity = 0;
-    var fired    = false; // only fire once per momentum run
+    var vel      = 0;
+    var bounced  = false; // fire only once per momentum run per boundary hit
 
     el.addEventListener('scroll', function() {
       var now = Date.now();
       var dt  = Math.max(now - prevTime, 1);
-      velocity  = (el.scrollTop - prevTop) / dt;
-      prevTop   = el.scrollTop;
-      prevTime  = now;
+      vel      = (el.scrollTop - prevTop) / dt;
+      prevTop  = el.scrollTop;
+      prevTime = now;
 
-      // Reset fired flag when scroll is mid-list (not at boundary)
-      var atTop    = el.scrollTop <= 0;
-      var atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-      if (!atTop && !atBottom) { fired = false; return; }
+      var atTop = el.scrollTop <= 0;
+      var atBot = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
 
-      // Only fire during momentum (no active touch) and with real velocity
-      if (!isPulling && !fired && Math.abs(velocity) > 0.3) {
-        fired = true;
-        post({ type: 'rb_momentum', velocity: velocity, atTop: atTop, atBottom: atBottom });
+      // Reset the once-per-hit guard when we move away from the boundary
+      if (!atTop && !atBot) { bounced = false; return; }
+
+      if (!pulling && !bounced && Math.abs(vel) > 0.25) {
+        bounced = true;
+        var swing    = Math.min(Math.abs(vel) * 16, MAX_PX);
+        var dir      = atTop ? 1 : -1;
+        var duration = Math.min(swing * 1.6, 130);
+        bounceOut(el, dir * swing, duration);
       }
     }, { passive: true });
   }
 
-  function scanScrollables(root) {
+  function scan(root) {
     try {
       var all = (root || document).querySelectorAll('*');
-      for (var i = 0; i < all.length; i++) attachScrollVelocity(all[i]);
-    } catch(e) {}
+      for (var i = 0; i < all.length; i++) attachMomentum(all[i]);
+    } catch (_) {}
   }
 
-  scanScrollables(document);
+  scan(document);
 
-  // Pick up dynamically added scroll containers (SPA route changes, etc.)
-  new MutationObserver(function(mutations) {
-    mutations.forEach(function(m) {
+  // Pick up scroll containers added by SPA route changes
+  new MutationObserver(function(muts) {
+    muts.forEach(function(m) {
       m.addedNodes.forEach(function(n) {
-        if (n.nodeType === 1) { attachScrollVelocity(n); scanScrollables(n); }
+        if (n.nodeType === 1) { attachMomentum(n); scan(n); }
       });
     });
   }).observe(document.body, { childList: true, subtree: true });
@@ -171,17 +239,6 @@ function buildOrientationScript(isLandscape: boolean): string {
 })();
 true;
 `;
-}
-
-// ── Max rubber-band displacement (px) and damping curve ───────────────────
-// Uses a logarithmic resistance so the first few pixels feel springy and
-// large drags level off — identical feel to iOS native rubber band.
-const MAX_RB_PX = 80;
-function rubberBandDelta(raw: number): number {
-  const sign = raw > 0 ? 1 : -1;
-  const abs  = Math.abs(raw);
-  // log curve: responsive near 0, levels off toward MAX_RB_PX
-  return sign * Math.min(MAX_RB_PX * (1 - Math.exp(-abs / 80)), MAX_RB_PX);
 }
 
 function LoadingView() {
@@ -213,81 +270,11 @@ export default function TabletScreen() {
   const prevLandscape = useRef<boolean | null>(null);
   const insets = useSafeAreaInsets();
 
-  // Rubber-band animation state
-  const translateY  = useRef(new Animated.Value(0)).current;
-  const springAnim  = useRef<Animated.CompositeAnimation | null>(null);
-
   useEffect(() => {
     if (prevLandscape.current === isLandscape) return;
     prevLandscape.current = isLandscape;
     webViewRef.current?.injectJavaScript(buildOrientationScript(isLandscape));
   }, [isLandscape]);
-
-  // Cancel any running spring and snap immediately (used when a new gesture starts)
-  const cancelSpring = useCallback(() => {
-    springAnim.current?.stop();
-    springAnim.current = null;
-  }, []);
-
-  // Spring the container back to rest
-  const springBack = useCallback(() => {
-    cancelSpring();
-    springAnim.current = Animated.spring(translateY, {
-      toValue:         0,
-      useNativeDriver: true,
-      tension:         140,
-      friction:        14,
-    });
-    springAnim.current.start(() => { springAnim.current = null; });
-  }, [cancelSpring, translateY]);
-
-  const handleMessage = useCallback((event: WebViewMessageEvent) => {
-    let msg: { type: string; delta?: number; velocity?: number; atTop?: boolean; atBottom?: boolean };
-    try { msg = JSON.parse(event.nativeEvent.data); } catch { return; }
-
-    switch (msg.type) {
-      // ── Touch drag at boundary ──────────────────────────────────────────
-      case 'rb_pull': {
-        cancelSpring();
-        // Apply rubber-band resistance curve directly (no animation, instant)
-        const offset = rubberBandDelta(msg.delta ?? 0);
-        translateY.setValue(offset);
-        break;
-      }
-      case 'rb_release': {
-        springBack();
-        break;
-      }
-
-      // ── Momentum scroll hits boundary ───────────────────────────────────
-      case 'rb_momentum': {
-        cancelSpring();
-        const v         = msg.velocity ?? 0;
-        const direction = (msg.atTop) ? 1 : -1;
-        // Clamp bounce distance proportional to velocity (px per ms → px swing)
-        const swing = Math.min(Math.abs(v) * 18, MAX_RB_PX);
-
-        springAnim.current = Animated.sequence([
-          // Bounce out: fast ease-out proportional to velocity
-          Animated.timing(translateY, {
-            toValue:         direction * swing,
-            duration:        Math.min(swing * 1.8, 130),
-            useNativeDriver: true,
-            easing:          Easing.out(Easing.quad),
-          }),
-          // Spring back to rest
-          Animated.spring(translateY, {
-            toValue:         0,
-            useNativeDriver: true,
-            tension:         140,
-            friction:        14,
-          }),
-        ]);
-        springAnim.current.start(() => { springAnim.current = null; });
-        break;
-      }
-    }
-  }, [cancelSpring, springBack, translateY]);
 
   // Show an explicit error instead of a broken WebView when the domain is missing.
   if (!WEB_URL) return <MissingDomainScreen />;
@@ -322,46 +309,39 @@ export default function TabletScreen() {
   // renders underneath the status bar. No inset is subtracted from the
   // screen height anywhere — the WebView is `flex: 1` and fills whatever
   // space remains.
-  //
-  // Rubber band: we keep bounces={false} / overScrollMode="never" so the
-  // native WebView scroll-view never double-bounces alongside our Animated
-  // translateY.  All rubber-band logic lives in RUBBER_BAND_JS + handleMessage.
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={{ height: insets.top, backgroundColor: "#0d1117" }} />
-      <Animated.View style={[styles.webview, { transform: [{ translateY }] }]}>
-        <WebView
-          ref={webViewRef}
-          source={{ uri: WEB_URL }}
-          style={styles.webview}
-          userAgent={TABLET_UA}
-          injectedJavaScript={buildOrientationScript(isLandscape) + "\n" + RUBBER_BAND_JS}
-          injectedJavaScriptForMainFrameOnly
-          javaScriptEnabled
-          domStorageEnabled
-          allowFileAccess
-          allowUniversalAccessFromFileURLs
-          mixedContentMode="always"
-          scalesPageToFit={false}
-          bounces={false}
-          overScrollMode="never"
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          startInLoadingState
-          renderLoading={() => <LoadingView />}
-          onMessage={handleMessage}
-          onError={(e) =>
-            console.warn("[WebView] error", e.nativeEvent.description)
-          }
-          onHttpError={(e) =>
-            console.warn("[WebView] HTTP", e.nativeEvent.statusCode, WEB_URL)
-          }
-          onContentProcessDidTerminate={() => {
-            webViewRef.current?.reload();
-          }}
-        />
-      </Animated.View>
+      <WebView
+        ref={webViewRef}
+        source={{ uri: WEB_URL }}
+        style={styles.webview}
+        userAgent={TABLET_UA}
+        injectedJavaScript={buildOrientationScript(isLandscape) + "\n" + RUBBER_BAND_JS}
+        injectedJavaScriptForMainFrameOnly
+        javaScriptEnabled
+        domStorageEnabled
+        allowFileAccess
+        allowUniversalAccessFromFileURLs
+        mixedContentMode="always"
+        scalesPageToFit={false}
+        bounces={false}
+        overScrollMode="never"
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
+        startInLoadingState
+        renderLoading={() => <LoadingView />}
+        onError={(e) =>
+          console.warn("[WebView] error", e.nativeEvent.description)
+        }
+        onHttpError={(e) =>
+          console.warn("[WebView] HTTP", e.nativeEvent.statusCode, WEB_URL)
+        }
+        onContentProcessDidTerminate={() => {
+          webViewRef.current?.reload();
+        }}
+      />
     </View>
   );
 }
