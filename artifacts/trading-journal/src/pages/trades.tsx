@@ -290,12 +290,17 @@ function FilterBottomSheet({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const calendarAnchorRef  = useRef<HTMLDivElement>(null);
 
-  // Scroll calendar into view whenever it opens (after the grid-rows transition starts)
+  // Scroll calendar into view when it opens.
+  // behavior:"instant" (not "smooth") — smooth scroll runs a JS-driven RAF
+  // animation that competes with the calendar's own expand transition on the
+  // main thread, doubling the layout work and causing the jank the user sees.
+  // Instant scroll is a single synchronous layout read+write, invisible to the
+  // user while the calendar is still fading in via the opacity transition.
   useEffect(() => {
     if (!activeInput) return;
     const id = setTimeout(() => {
-      calendarAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }, 60); // slight delay so the grid expand has begun
+      calendarAnchorRef.current?.scrollIntoView({ behavior: "instant", block: "nearest" });
+    }, 80); // after max-height transition has opened enough to be measurable
     return () => clearTimeout(id);
   }, [activeInput]);
 
@@ -576,25 +581,30 @@ function FilterBottomSheet({
                   })}
                 </div>
 
-                {/* Calendar — grid-template-rows expand (GPU-composited, no layout reflow) */}
+                {/* Calendar — max-height clip + opacity fade.
+                    grid-template-rows 0fr→1fr was the original approach but it
+                    requires the browser to re-measure content height on EVERY
+                    animation frame (layout reflow per frame), causing visible
+                    jank on mobile WebView. max-height with a fixed pixel value
+                    costs one layout calculation when it changes, then only
+                    opacity (GPU-composited) animates every frame. */}
                 <div ref={calendarAnchorRef} style={{
-                  display: "grid",
-                  gridTemplateRows: activeInput ? "1fr" : "0fr",
+                  maxHeight: activeInput ? "400px" : "0px",
+                  overflow: "hidden",
                   opacity: activeInput ? 1 : 0,
-                  transition: "grid-template-rows 0.22s ease, opacity 0.18s ease",
+                  pointerEvents: activeInput ? "auto" : "none",
+                  transition: "max-height 0.2s ease, opacity 0.18s ease",
                 }}>
-                  <div style={{ overflow: "hidden" }}>
-                    <p style={{ fontSize: 11, color: "rgba(148,163,184,0.45)", marginBottom: 8, marginTop: 2 }}>
-                      {activeInput === "from" ? "Tap a start date" : "Tap an end date"}
-                    </p>
-                    <div style={{ padding: "10px 6px 8px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                      <MiniRangePicker
-                        from={draftDateFrom}
-                        to={draftDateTo}
-                        activeInput={activeInput ?? "from"}
-                        onSelect={handleDateSelect}
-                      />
-                    </div>
+                  <p style={{ fontSize: 11, color: "rgba(148,163,184,0.45)", marginBottom: 8, marginTop: 2 }}>
+                    {activeInput === "from" ? "Tap a start date" : "Tap an end date"}
+                  </p>
+                  <div style={{ padding: "10px 6px 8px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <MiniRangePicker
+                      from={draftDateFrom}
+                      to={draftDateTo}
+                      activeInput={activeInput ?? "from"}
+                      onSelect={handleDateSelect}
+                    />
                   </div>
                 </div>
               </div>
