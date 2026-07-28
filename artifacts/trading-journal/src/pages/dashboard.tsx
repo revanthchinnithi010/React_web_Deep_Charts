@@ -12,7 +12,7 @@ import { useCombinedPortfolio } from "@/store/combinedPortfolioStore";
 import { useBrokerStore } from "@/store/brokerStore";
 import { Link, useLocation } from "wouter";
 import { BROKER_MAP, BROKER_INFO, TV_LINKS } from "@/data/sampleData";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { useTickStore } from "@/store/tickStore";
 import { useChartStore } from "@/store/chartStore";
 import {
@@ -34,9 +34,8 @@ const tooltipStyle = {
 
 // ── Calendar Heatmap ──────────────────────────────────────────────────────────
 // ── Day Detail Sheet ──────────────────────────────────────────────────────────
-const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";
-const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
-const DUR_OPEN   = 320;
+import { COMPOSITOR_EASE as EASE_OPEN, COMPOSITOR_EASE_CLOSE as EASE_CLOSE } from "@/animations/motion";
+const DUR_OPEN   = 320; // sheet-level open — larger surface needs more time
 const DUR_CLOSE  = 240;
 
 type DashTrade = {

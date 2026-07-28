@@ -41,11 +41,9 @@ import { SecuritySettingsPage }     from "./SecuritySettingsPage";
 import { AboutSettingsPage }        from "./AboutSettingsPage";
 
 /* ─── animation constants ──────────────────────────────────────────────────── */
-
-const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";
-const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
-const DUR_OPEN   = 230;
-const DUR_CLOSE  = 210;
+import { COMPOSITOR_EASE as EASE_OPEN, COMPOSITOR_EASE_CLOSE as EASE_CLOSE } from "@/animations/motion";
+const DUR_OPEN  = 230;
+const DUR_CLOSE = 210;
 
 /* ─── small layout helpers ──────────────────────────────────────────────────── */
 

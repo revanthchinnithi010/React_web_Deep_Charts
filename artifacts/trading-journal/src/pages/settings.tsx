@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PageTransition, AnimatedCard, AnimatedList, AnimatedListItem, AnimatedButton, FadeIn } from "@/components/animations";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 
 function SectionHeader({ icon: Icon, title, description }: {
   icon: React.ElementType; title: string; description: string;

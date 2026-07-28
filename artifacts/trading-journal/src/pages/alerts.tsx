@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, memo, useRef, useImperativeHandle, forwardRef } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Bell, BellRing, Plus, Pause, Play, Trash2,
   Zap, Activity, CheckCircle2, Clock, AlertTriangle,
@@ -107,8 +107,8 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 40 }} transition={{ duration: 0.25, ease: "easeOut" }}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }} transition={{ type: "tween", duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="fixed right-4 top-16 w-80 z-50 rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden"
       style={{ background: "hsl(var(--card))" }}
     >

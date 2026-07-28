@@ -137,7 +137,9 @@ export const sidebarItemVariants: Variants = {
  * Panel:    opacity + transform · 180ms open / 120ms close · EASE_PREMIUM
  * Backdrop: opacity only        · 140ms open / 120ms close · browser "ease"
  */
-export const COMPOSITOR_EASE = "cubic-bezier(0.22,1,0.36,1)";
+export const COMPOSITOR_EASE       = "cubic-bezier(0.22,1,0.36,1)";
+/** Ease-in curve for closing / exiting surfaces — mirrors COMPOSITOR_EASE as the close direction. */
+export const COMPOSITOR_EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
 
 export const COMPOSITOR_PANEL_DURATION_OPEN  = "0.18s";
 export const COMPOSITOR_PANEL_DURATION_CLOSE = "0.12s";

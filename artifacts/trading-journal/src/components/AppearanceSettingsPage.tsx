@@ -15,9 +15,8 @@ import { ArrowLeft, Sun, Moon, Monitor, Check } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { ThemeMode } from "@/contexts/ThemeContext";
 
-const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";
-const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
-const DUR_OPEN   = 240;
+import { COMPOSITOR_EASE as EASE_OPEN, COMPOSITOR_EASE_CLOSE as EASE_CLOSE } from "@/animations/motion";
+const DUR_OPEN  = 240;
 const DUR_CLOSE  = 210;
 
 const OPTIONS: {

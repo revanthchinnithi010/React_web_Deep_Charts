@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useBrokerStore } from "@/store/brokerStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Wifi, WifiOff, RefreshCw, CheckCircle2, X, Upload, Shield,
   Lock, Clock, AlertCircle, Zap, FileText, AlertTriangle,
@@ -39,14 +39,6 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 type SyncStatus = "idle" | "syncing" | "success" | "error";
 type ImportStatus = "idle" | "importing" | "success" | "error";
 
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
-const item = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
-};
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -58,7 +50,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       <motion.div
         className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
         animate={{ x: checked ? 22 : 2 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        transition={{ type: "tween", duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
       />
     </button>
   );

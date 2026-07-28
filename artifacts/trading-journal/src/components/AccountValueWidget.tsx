@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff, ChevronRight, Layers } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { useCurrencyStore, formatAmount } from "@/store/currencyStore";
 import type { Currency } from "@/store/currencyStore";
 import { useLocation } from "wouter";

@@ -27,10 +27,9 @@ import { useBrokerStore } from "@/store/brokerStore";
 
 /* ─── animation ────────────────────────────────────────────────────────────── */
 
-const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";
-const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
-const DUR_OPEN   = 240;
-const DUR_CLOSE  = 210;
+import { COMPOSITOR_EASE as EASE_OPEN, COMPOSITOR_EASE_CLOSE as EASE_CLOSE } from "@/animations/motion";
+const DUR_OPEN  = 240;
+const DUR_CLOSE = 210;
 
 const BASE = (import.meta as { env: { BASE_URL: string } }).env.BASE_URL.replace(/\/$/, "");
 

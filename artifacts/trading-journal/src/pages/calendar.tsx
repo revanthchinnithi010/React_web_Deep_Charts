@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { createPortal } from "react-dom";
 import { useGetCalendarHeatmap, useListTrades } from "@workspace/api-client-react";
 import { useCurrencyFormatter } from "@/store/currencyStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Calendar, BarChart2,
   ArrowLeft, ExternalLink, ImageIcon, Tag, AlertTriangle, FileText,
@@ -50,11 +50,9 @@ function getIntensityStyle(pnl: number, trades: number, maxAbs: number, isLight:
     : { backgroundColor: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" };
 }
 
-/* ─── animation constants (mirrors ProfilePage / NotificationPanel) ──────────── */
-
-const EASE_OPEN  = "cubic-bezier(0.22,1,0.36,1)";
-const EASE_CLOSE = "cubic-bezier(0.4,0,0.6,1)";
-const DUR_OPEN   = 320;
+/* ─── animation constants ────────────────────────────────────────────────────── */
+import { COMPOSITOR_EASE as EASE_OPEN, COMPOSITOR_EASE_CLOSE as EASE_CLOSE } from "@/animations/motion";
+const DUR_OPEN   = 320; // sheet-level open — larger surface needs more time
 const DUR_CLOSE  = 240;
 
 /* ─── Trade type (local subset from API) ────────────────────────────────────── */

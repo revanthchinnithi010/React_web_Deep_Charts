@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
@@ -34,7 +34,7 @@ function ensureCSS() {
   s.id = CSS_ID;
   s.textContent = `
     .tj-cnav-entrance {
-      animation: tj-cnav-in 0.50s cubic-bezier(0.34,1.52,0.64,1) both;
+      animation: tj-cnav-in 0.40s cubic-bezier(0.22,1,0.36,1) both;
     }
     @keyframes tj-cnav-in {
       from { transform: translateY(110%); opacity: 0; }
@@ -160,8 +160,8 @@ export function MobileBottomNav() {
                   }}
                 >
                   <motion.div
-                    animate={{ scale: active ? 1.16 : 1 }}
-                    transition={{ type: "spring", stiffness: 550, damping: 28 }}
+                    animate={{ scale: active ? 1.12 : 1 }}
+                    transition={{ type: "tween", duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
                     style={{ position: "relative" }}
                   >
                     <tab.Icon
