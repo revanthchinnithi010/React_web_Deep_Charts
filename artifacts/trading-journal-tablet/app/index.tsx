@@ -97,7 +97,7 @@ const RUBBER_BAND_JS = `
     });
   }
 
-  // rAF-based ease-out to `target`, then hand off to springBack.
+  // rAF-based ease-out to target, then hand off to springBack.
   // Used for the momentum bounce-out phase only.
   function bounceOut(el, target, duration) {
     freeze(el);
