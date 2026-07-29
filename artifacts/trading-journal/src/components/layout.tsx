@@ -381,10 +381,11 @@ function ReconnectBanner() {
  * in sync if paths change.
  */
 const NO_HEADER_PATHS_LAYOUT = new Set([
-  "/charts",           // gesture surface owns the full viewport
-  "/position-detail",  // clip-path shared-element covers the full screen
-  "/pnl",              // keep-alive full-viewport UI
-  "/trades",           // page has its own secondary header
+  "/charts",             // gesture surface owns the full viewport
+  "/position-detail",    // clip-path shared-element covers the full screen
+  "/pnl",                // keep-alive full-viewport UI
+  "/trades",             // page has its own secondary header
+  "/dashboard-alerts",   // full-screen cover page with its own header
 ]);
 
 export const Layout = memo(function Layout({
