@@ -361,13 +361,17 @@ export const SelectAlertTypeOverlay = memo(function SelectAlertTypeOverlay({
           pointerEvents: open ? "auto" : "none",
         }}
       >
-        {/* ── Header — identical pattern to every other overlay in the app ── */}
+        {/* ── Header ──
+             No env(safe-area-inset-top) here.
+             The Expo WebView already has a native <View height={insets.top}/> spacer
+             above the WebView frame, so the WebView content starts below the notch.
+             Adding safe-area padding again would double the gap.
+             In a desktop browser env(safe-area-inset-top) is 0, so this is safe. ── */}
         <div
           style={{
             display: "flex", alignItems: "center", gap: 12,
             padding: "0 16px",
-            paddingTop: "env(safe-area-inset-top)",
-            height: "calc(60px + env(safe-area-inset-top))",
+            height: 60,
             borderBottom: "1px solid rgba(255,255,255,0.07)",
             background: "#08090c",
             flexShrink: 0,
