@@ -243,9 +243,15 @@ function UTCDateTimePicker({
 }
 
 // ─── Create Price Alert Modal ──────────────────────────────────────────────────
-const CreatePriceAlertModal = memo(function CreatePriceAlertModal({ onClose, onSave }: { onClose: () => void; onSave: (a: PriceAlert) => void }) {
+export const CreatePriceAlertModal = memo(function CreatePriceAlertModal({
+  onClose, onSave, initialSymbol,
+}: {
+  onClose: () => void;
+  onSave: (a: PriceAlert) => void;
+  initialSymbol?: string;
+}) {
   const [form, setForm] = useState({
-    symbol: "NAS100", condition: "above" as "above" | "below" | "touch",
+    symbol: initialSymbol ?? "NAS100", condition: "above" as "above" | "below" | "touch",
     targetPrice: "", notes: "", expiry: "",
   });
 
@@ -308,9 +314,15 @@ const CreatePriceAlertModal = memo(function CreatePriceAlertModal({ onClose, onS
 });
 
 // ─── Create Zone Alert Modal ───────────────────────────────────────────────────
-const CreateZoneAlertModal = memo(function CreateZoneAlertModal({ onClose, onSave }: { onClose: () => void; onSave: (a: ZoneAlert) => void }) {
+export const CreateZoneAlertModal = memo(function CreateZoneAlertModal({
+  onClose, onSave, initialSymbol,
+}: {
+  onClose: () => void;
+  onSave: (a: ZoneAlert) => void;
+  initialSymbol?: string;
+}) {
   const [form, setForm] = useState({
-    symbol: "NAS100", zoneType: "supply" as ZoneAlert["zoneType"],
+    symbol: initialSymbol ?? "NAS100", zoneType: "supply" as ZoneAlert["zoneType"],
     upperPrice: "", lowerPrice: "", timeframe: "1H",
     condition: "touch" as ZoneAlert["condition"], notes: "",
   });
@@ -401,9 +413,15 @@ const CreateZoneAlertModal = memo(function CreateZoneAlertModal({ onClose, onSav
 });
 
 // ─── Create Trendline Alert Modal ──────────────────────────────────────────────
-const CreateTrendlineAlertModal = memo(function CreateTrendlineAlertModal({ onClose, onSave }: { onClose: () => void; onSave: (a: TrendlineAlert) => void }) {
+export const CreateTrendlineAlertModal = memo(function CreateTrendlineAlertModal({
+  onClose, onSave, initialSymbol,
+}: {
+  onClose: () => void;
+  onSave: (a: TrendlineAlert) => void;
+  initialSymbol?: string;
+}) {
   const [form, setForm] = useState({
-    symbol: "NAS100", timeframe: "1H",
+    symbol: initialSymbol ?? "NAS100", timeframe: "1H",
     p1Price: "", p1Time: "", p2Price: "", p2Time: "",
     condition: "touch" as TrendlineAlert["condition"], notes: "",
   });

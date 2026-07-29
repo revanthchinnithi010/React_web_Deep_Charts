@@ -16,16 +16,26 @@ import { SharedMarketSelector } from "@/components/SharedMarketSelector";
  * onBack: optional — when provided the SharedMarketSelector renders a back button
  * in its own header (used by DashboardMarketsOverlay so there's no separate header layer).
  */
-export default function Markets({ onBack }: { onBack?: () => void } = {}) {
+export default function Markets({
+  onBack,
+  onWatchlistTap: onWatchlistTapProp,
+}: {
+  onBack?: () => void;
+  onWatchlistTap?: (symbol: string) => void;
+} = {}) {
   const chartSymbol = useChartStore(s => s.symbol);
   const [, navigate] = useLocation();
 
-  // Watchlist row tap: select symbol then go straight to the Charts page.
-  // No secondary sheet — the chart will read the updated symbol from chartStore.
+  // Watchlist row tap: if an override is provided (e.g. from DashboardMarketsOverlay
+  // to open the Select Alert Type screen), call it; otherwise go to Charts.
   const handleWatchlistTap = useCallback((symbol: string) => {
     useChartStore.getState().setSymbol(symbol); // also persists to localStorage internally
-    navigate("/charts");
-  }, [navigate]);
+    if (onWatchlistTapProp) {
+      onWatchlistTapProp(symbol);
+    } else {
+      navigate("/charts");
+    }
+  }, [navigate, onWatchlistTapProp]);
 
   // Markets tab row tap: select symbol only, stay on Markets.
   const handleMarketsSelect = useCallback((symbol: string) => {

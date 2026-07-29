@@ -23,6 +23,8 @@ import {
 const AlertsPage  = lazy(() => import("@/pages/alerts"));
 const MarketsPage = lazy(() => import("@/pages/markets"));
 
+import { SelectAlertTypeOverlay } from "@/components/SelectAlertTypeOverlay";
+
 // ── Dashboard Alerts Overlay ──────────────────────────────────────────────────
 // Full-screen portal rendered on top of Dashboard (and bottom nav) without
 // navigating away from "/". Bottom nav stays on Dashboard, state is shared
@@ -151,6 +153,10 @@ const DashboardAlertsOverlay = memo(function DashboardAlertsOverlay() {
 // ── Dashboard Markets Overlay ─────────────────────────────────────────────────
 // Full-screen portal rendered on top of Dashboard (and bottom nav) without
 // navigating away from "/". Bottom nav stays on Dashboard tab.
+//
+// When a coin in the Watchlist is tapped, instead of navigating to /charts we
+// show the SelectAlertTypeOverlay (push from right) so the user can pick an
+// alert type for that symbol.
 const DashboardMarketsOverlay = memo(function DashboardMarketsOverlay() {
   const open    = useChartStore(s => s.dashboardMarketsOpen);
   const setOpen = useChartStore(s => s.setDashboardMarketsOpen);
@@ -190,6 +196,17 @@ const DashboardMarketsOverlay = memo(function DashboardMarketsOverlay() {
     return () => window.removeEventListener("keydown", h);
   }, [open]);
 
+  // Symbol selected from the Watchlist — drives the SelectAlertTypeOverlay
+  const [alertSymbol, setAlertSymbol] = useState<string | null>(null);
+
+  const handleWatchlistTap = useCallback((symbol: string) => {
+    setAlertSymbol(symbol);
+  }, []);
+
+  const handleAlertTypeClose = useCallback(() => {
+    setAlertSymbol(null);
+  }, []);
+
   if (!hasOpenedRef.current) return null;
 
   return createPortal(
@@ -213,10 +230,20 @@ const DashboardMarketsOverlay = memo(function DashboardMarketsOverlay() {
         {/* ── Markets content — back button lives inside SharedMarketSelector header ── */}
         <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
           <Suspense fallback={null}>
-            <MarketsPage onBack={() => setOpenRef.current(false)} />
+            <MarketsPage
+              onBack={() => setOpenRef.current(false)}
+              onWatchlistTap={handleWatchlistTap}
+            />
           </Suspense>
         </div>
       </div>
+
+      {/* ── Select Alert Type — pushes in from the right over the Markets panel ── */}
+      <SelectAlertTypeOverlay
+        open={!!alertSymbol}
+        symbol={alertSymbol ?? ""}
+        onClose={handleAlertTypeClose}
+      />
     </div>,
     document.body,
   );
