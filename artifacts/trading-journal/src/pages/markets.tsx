@@ -12,8 +12,11 @@ import { SharedMarketSelector } from "@/components/SharedMarketSelector";
  * - Watchlist tab tap → onWatchlistTap → sets symbol in chartStore then navigates
  *   directly to /charts. No secondary sheet is opened.
  * - Markets tab tap  → onSelect → just updates chartStore.symbol (no navigation).
+ *
+ * onBack: optional — when provided the SharedMarketSelector renders a back button
+ * in its own header (used by DashboardMarketsOverlay so there's no separate header layer).
  */
-export default function Markets() {
+export default function Markets({ onBack }: { onBack?: () => void } = {}) {
   const chartSymbol = useChartStore(s => s.symbol);
   const [, navigate] = useLocation();
 
@@ -42,6 +45,7 @@ export default function Markets() {
         activeSymbol={chartSymbol}
         onSelect={handleMarketsSelect}
         onWatchlistTap={handleWatchlistTap}
+        backAction={onBack}
       />
     </div>
   );

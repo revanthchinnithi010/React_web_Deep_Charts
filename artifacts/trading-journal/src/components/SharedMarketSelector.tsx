@@ -543,6 +543,12 @@ export interface SharedMarketSelectorProps {
    * Markets page uses this for the diagnostics toggle button.
    */
   headerActions?: React.ReactNode;
+  /**
+   * When provided, renders a back-arrow button on the left of the header and
+   * adds safe-area-inset-top padding. Used when the Markets page is pushed as
+   * an overlay (e.g. from Dashboard) without changing the bottom nav tab.
+   */
+  backAction?: () => void;
 }
 
 export const SharedMarketSelector = memo(function SharedMarketSelector({
@@ -553,6 +559,7 @@ export const SharedMarketSelector = memo(function SharedMarketSelector({
   onWatchlistTap,
   onClose,
   headerActions,
+  backAction,
 }: SharedMarketSelectorProps) {
 
   const [activeTab, setActiveTab] = useState<Tab>("Watchlist");
@@ -1234,10 +1241,41 @@ export const SharedMarketSelector = memo(function SharedMarketSelector({
           </div>
         )}
 
+        {/* Safe-area spacer — only when backAction is present (overlay mode) */}
+        {backAction && (
+          <div style={{ height: "env(safe-area-inset-top, 0px)", flexShrink: 0 }} />
+        )}
+
+        {/* Back button row — only when backAction is present */}
+        {backAction && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "0 8px 0 4px",
+            height: 44,
+            flexShrink: 0,
+          }}>
+            <button
+              onClick={backAction}
+              style={{
+                width: 36, height: 36, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "transparent", border: "none", cursor: "pointer",
+                color: "rgba(255,255,255,0.6)",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 5l-7 7 7 7"/>
+              </svg>
+            </button>
+            <span style={{ fontSize: 17, fontWeight: 700, color: "#ffffff" }}>Markets</span>
+          </div>
+        )}
+
         {/* Tab row + action buttons */}
         <div style={{
           display: "flex", alignItems: "center",
-          padding: mode === "sheet" ? "4px 12px 0" : "10px 12px 0",
+          padding: mode === "sheet" ? "4px 12px 0" : backAction ? "4px 12px 0" : "10px 12px 0",
           gap: 8,
         }}>
           <div
