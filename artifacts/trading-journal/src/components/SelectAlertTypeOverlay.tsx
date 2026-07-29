@@ -15,7 +15,7 @@
 
 import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, GitBranch, Layers, Target } from "lucide-react";
 import { useSymbolTick } from "@/store/tickStore";
 import { useAlertStore } from "@/store/alertStore";
@@ -29,11 +29,40 @@ import {
   COMPOSITOR_EASE,
   COMPOSITOR_EASE_CLOSE,
   TAP_TRANSITION,
+  EASE,
+  DUR_FAST,
+  DUR_STANDARD,
 } from "@/animations/motion";
 
 // ── Animation durations (ms) ─────────────────────────────────────────────────
 const DUR_OPEN  = 320;
 const DUR_CLOSE = 240;
+
+// ── Keyframe injection ────────────────────────────────────────────────────────
+const KEYFRAMES = `
+@keyframes sat-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
+}
+@keyframes sat-ripple {
+  0%   { transform: scale(0); opacity: 0.35; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+@keyframes sat-price-flash {
+  0%   { opacity: 1; }
+  30%  { opacity: 0.55; }
+  100% { opacity: 1; }
+}
+`;
+if (typeof document !== "undefined") {
+  const id = "__sat_kf__";
+  if (!document.getElementById(id)) {
+    const s = document.createElement("style");
+    s.id = id;
+    s.textContent = KEYFRAMES;
+    document.head.appendChild(s);
+  }
+}
 
 // ── Price formatter ──────────────────────────────────────────────────────────
 function formatPrice(price: number): string {
@@ -45,197 +74,372 @@ function formatPrice(price: number): string {
   return price.toFixed(8);
 }
 
-// ── Coin info strip at the top of the page ───────────────────────────────────
-const CoinInfoStrip = memo(function CoinInfoStrip({ symbol }: { symbol: string }) {
+// ── Derive instrument type from symbol ───────────────────────────────────────
+function getInstrumentType(symbol: string): string {
+  const s = symbol.toUpperCase();
+  if (s.includes("PERP") || s.includes("USD")) return "PERP";
+  if (s.includes("SPOT")) return "SPOT";
+  return "PERP";
+}
+
+// ── Coin initials for the circular logo ─────────────────────────────────────
+function getCoinInitials(symbol: string): string {
+  // Strip common suffixes: USD, USDT, PERP, SPOT
+  const cleaned = symbol.replace(/(USDT?|PERP|SPOT)$/i, "").trim();
+  return cleaned.slice(0, 2).toUpperCase();
+}
+
+// ── Premium Live Symbol Card ─────────────────────────────────────────────────
+const PremiumSymbolCard = memo(function PremiumSymbolCard({ symbol }: { symbol: string }) {
   const tick = useSymbolTick(symbol);
   const price = tick?.price ?? 0;
   const change = tick?.changePct ?? 0;
   const isUp = change >= 0;
+  const instrType = getInstrumentType(symbol);
+  const initials = getCoinInitials(symbol);
+
+  // Flash animation on price update
+  const priceRef = useRef<HTMLSpanElement>(null);
+  const prevPriceRef = useRef(price);
+  useEffect(() => {
+    if (price !== prevPriceRef.current && priceRef.current) {
+      priceRef.current.style.animation = "none";
+      void priceRef.current.offsetHeight; // reflow
+      priceRef.current.style.animation = "sat-price-flash 0.35s ease";
+    }
+    prevPriceRef.current = price;
+  }, [price]);
+
+  const accentGreen = "#22c55e";
 
   return (
     <div
       style={{
         margin: "20px 16px 0",
-        padding: "16px 18px",
-        borderRadius: 18,
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
+        minHeight: 96,
+        padding: "16px 20px",
+        borderRadius: 22,
+        background: "linear-gradient(135deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.025) 100%)",
+        border: "1px solid rgba(255,255,255,0.10)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        gap: 12,
+        flexShrink: 0,
       }}
     >
-      {/* Left: symbol + badge */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {/* Icon circle */}
+      {/* ── LEFT: logo + symbol + badges ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
+        {/* Circular coin logo */}
         <div
           style={{
-            width: 42, height: 42, borderRadius: "50%",
-            background: "rgba(183,255,90,0.10)",
-            border: "1px solid rgba(183,255,90,0.18)",
+            width: 50, height: 50, borderRadius: "50%",
+            background: "linear-gradient(145deg, rgba(183,255,90,0.18) 0%, rgba(34,197,94,0.10) 100%)",
+            border: "1.5px solid rgba(183,255,90,0.28)",
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0,
+            boxShadow: "0 0 16px rgba(183,255,90,0.12), 0 4px 12px rgba(0,0,0,0.3)",
+            position: "relative",
           }}
         >
+          {/* Live pulse ring */}
+          <div
+            style={{
+              position: "absolute", inset: -4,
+              borderRadius: "50%",
+              border: "1px solid rgba(34,197,94,0.15)",
+            }}
+          />
           <span
             style={{
-              fontSize: 13, fontWeight: 800,
+              fontSize: 16, fontWeight: 900,
               color: "#B7FF5A",
-              letterSpacing: "-0.02em",
+              letterSpacing: "-0.03em",
               fontFamily: "monospace",
+              lineHeight: 1,
             }}
           >
-            {symbol.slice(0, 2)}
+            {initials}
           </span>
         </div>
 
-        <div>
-          <div
-            style={{
-              fontSize: 16, fontWeight: 800, color: "#ffffff",
-              letterSpacing: "0.02em", fontFamily: "monospace", lineHeight: 1,
-            }}
-          >
-            {symbol}
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          {/* Symbol + PERP badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <span
+              style={{
+                fontSize: 17, fontWeight: 800, color: "#ffffff",
+                letterSpacing: "0.01em",
+                fontFamily: "'SF Pro Display', 'Inter', system-ui, monospace",
+                lineHeight: 1,
+              }}
+            >
+              {symbol}
+            </span>
+            {/* Instrument badge */}
+            <div
+              style={{
+                padding: "2px 6px", borderRadius: 5,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                fontSize: 9, fontWeight: 700,
+                color: "rgba(255,255,255,0.55)",
+                letterSpacing: "0.07em",
+                lineHeight: 1,
+              }}
+            >
+              {instrType}
+            </div>
           </div>
-          {/* Exchange badge */}
+
+          {/* Broker badge */}
           <div
             style={{
-              marginTop: 5, display: "inline-flex", alignItems: "center", gap: 4,
-              padding: "2px 7px", borderRadius: 5,
-              background: "rgba(96,165,250,0.12)", border: "1px solid rgba(96,165,250,0.22)",
-              fontSize: 9.5, fontWeight: 700, color: "#60a5fa",
-              letterSpacing: "0.06em",
+              display: "inline-flex", alignItems: "center", gap: 4,
+              padding: "3px 8px", borderRadius: 6,
+              background: "rgba(96,165,250,0.10)",
+              border: "1px solid rgba(96,165,250,0.20)",
+              width: "fit-content",
             }}
           >
-            DELTA
+            {/* Delta diamond icon */}
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+              <path d="M5 0L9.5 5L5 10L0.5 5L5 0Z" fill="#60a5fa" opacity="0.9"/>
+            </svg>
+            <span
+              style={{
+                fontSize: 9, fontWeight: 700, color: "#60a5fa",
+                letterSpacing: "0.08em", lineHeight: 1,
+              }}
+            >
+              DELTA
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Right: price + change */}
-      <div style={{ textAlign: "right" }}>
-        <div
+      {/* ── RIGHT: price + change + LIVE badge ── */}
+      <div style={{ textAlign: "right", flexShrink: 0 }}>
+        {/* Live price */}
+        <span
+          ref={priceRef}
           style={{
-            fontSize: 20, fontWeight: 800, color: "#ffffff",
-            fontFamily: "monospace", lineHeight: 1, letterSpacing: "-0.01em",
+            display: "block",
+            fontSize: 28, fontWeight: 800,
+            color: "#ffffff",
+            fontFamily: "'SF Pro Display', 'Inter', monospace",
+            letterSpacing: "-0.02em",
+            lineHeight: 1,
           }}
         >
           {price > 0 ? formatPrice(price) : "—"}
-        </div>
-        {tick && (
-          <div
+        </span>
+
+        {/* Change % */}
+        <div style={{ marginTop: 4, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+          <span
             style={{
-              marginTop: 4, fontSize: 12, fontWeight: 600,
-              color: isUp ? "#34d399" : "#f87171",
+              fontSize: 14, fontWeight: 700,
+              color: isUp ? accentGreen : "#f87171",
+              letterSpacing: "-0.01em",
             }}
           >
-            {isUp ? "+" : ""}{change.toFixed(2)}%
+            {tick ? `${isUp ? "+" : ""}${change.toFixed(2)}%` : "—"}
+          </span>
+        </div>
+
+        {/* LIVE badge + pulsing dot */}
+        <div
+          style={{
+            marginTop: 7,
+            display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 5,
+          }}
+        >
+          <div
+            style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: accentGreen,
+              boxShadow: `0 0 6px ${accentGreen}`,
+              animation: "sat-pulse-dot 1.6s ease-in-out infinite",
+              flexShrink: 0,
+            }}
+          />
+          <div
+            style={{
+              padding: "2px 7px", borderRadius: 5,
+              background: "rgba(34,197,94,0.12)",
+              border: "1px solid rgba(34,197,94,0.22)",
+              fontSize: 9, fontWeight: 700,
+              color: accentGreen,
+              letterSpacing: "0.08em",
+              lineHeight: 1,
+            }}
+          >
+            LIVE
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 });
+
+// ── Ripple hook ───────────────────────────────────────────────────────────────
+interface RippleState { id: number; x: number; y: number; }
+
+function useRipple() {
+  const [ripples, setRipples] = useState<RippleState[]>([]);
+  const counterRef = useRef(0);
+
+  const trigger = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const id = ++counterRef.current;
+    setRipples(prev => [...prev, { id, x, y }]);
+    setTimeout(() => {
+      setRipples(prev => prev.filter(r => r.id !== id));
+    }, 600);
+  }, []);
+
+  return { ripples, trigger };
+}
 
 // ── Alert type card ──────────────────────────────────────────────────────────
 interface AlertTypeCardProps {
   icon: React.ReactNode;
   iconBg: string;
   iconBorder: string;
+  iconGlow: string;
   accentColor: string;
   title: string;
-  subtitle: string;
+  description: string;
   index: number;
   onPress: () => void;
 }
 
 function AlertTypeCard({
-  icon, iconBg, iconBorder, accentColor, title, subtitle, index, onPress,
+  icon, iconBg, iconBorder, iconGlow, accentColor, title, description, index, onPress,
 }: AlertTypeCardProps) {
   const [pressed, setPressed] = useState(false);
+  const { ripples, trigger } = useRipple();
 
   return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "tween", duration: DUR_STANDARD, ease: EASE, delay: index * 0.06 }}
+      style={{ width: "100%" }}
+    >
     <motion.button
       whileTap={{ scale: 0.97 }}
       transition={TAP_TRANSITION}
-      onPointerDown={() => setPressed(true)}
+      onPointerDown={(e) => { setPressed(true); trigger(e); }}
       onPointerUp={() => setPressed(false)}
       onPointerLeave={() => setPressed(false)}
       onClick={onPress}
       style={{
+        position: "relative",
+        overflow: "hidden",
         display: "flex",
         alignItems: "center",
         gap: 16,
         width: "100%",
-        padding: "20px 20px",
-        borderRadius: 20,
-        border: `1px solid ${pressed ? accentColor + "40" : "rgba(255,255,255,0.07)"}`,
+        height: 90,
+        padding: "0 18px",
+        borderRadius: 22,
+        border: `1px solid ${pressed ? accentColor + "35" : "rgba(255,255,255,0.08)"}`,
         background: pressed
-          ? `rgba(255,255,255,0.06)`
-          : "rgba(255,255,255,0.03)",
+          ? `linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)`
+          : "linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.02) 100%)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
         boxShadow: pressed
-          ? `0 0 0 1px ${accentColor}22, 0 8px 32px rgba(0,0,0,0.4)`
+          ? `0 0 0 1px ${accentColor}20, 0 0 24px ${accentColor}18, 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07)`
           : "0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)",
         cursor: "pointer",
         textAlign: "left",
-        transition: "background 0.15s, border-color 0.15s, box-shadow 0.15s",
+        transition: "background 0.15s ease, border-color 0.15s ease, box-shadow 0.18s ease",
         WebkitTapHighlightColor: "transparent",
-        animationDelay: `${index * 60}ms`,
         willChange: "transform",
+        flexShrink: 0,
       } as React.CSSProperties}
     >
-      {/* Icon */}
+      {/* Ripple layer */}
+      {ripples.map(r => (
+        <span
+          key={r.id}
+          style={{
+            position: "absolute",
+            left: r.x, top: r.y,
+            width: 120, height: 120,
+            marginLeft: -60, marginTop: -60,
+            borderRadius: "50%",
+            background: `${accentColor}22`,
+            animation: "sat-ripple 0.55s cubic-bezier(0.22,1,0.36,1) forwards",
+            pointerEvents: "none",
+          }}
+        />
+      ))}
+
+      {/* Large icon container — 60×60 */}
       <div
         style={{
-          width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+          width: 60, height: 60, borderRadius: 16, flexShrink: 0,
           background: iconBg,
           border: `1px solid ${iconBorder}`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: `0 4px 16px ${iconBg}`,
+          boxShadow: `0 0 20px ${iconGlow}, 0 4px 16px rgba(0,0,0,0.25)`,
+          transition: "box-shadow 0.18s ease",
         }}
       >
         {icon}
       </div>
 
-      {/* Text */}
+      {/* Text — center */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: 16, fontWeight: 700, color: "#ffffff",
+            fontSize: 20, fontWeight: 600, color: "#ffffff",
             lineHeight: 1, marginBottom: 7,
+            letterSpacing: "-0.01em",
+            fontFamily: "'SF Pro Display', 'Inter', system-ui, sans-serif",
           }}
         >
           {title}
         </div>
         <div
           style={{
-            fontSize: 12.5, fontWeight: 400,
-            color: "rgba(148,163,184,0.7)",
-            lineHeight: 1.5,
+            fontSize: 14, fontWeight: 500,
+            color: "rgba(148,163,184,0.65)",
+            lineHeight: 1.45,
+            letterSpacing: "0em",
           }}
         >
-          {subtitle}
+          {description}
         </div>
       </div>
 
-      {/* Chevron */}
+      {/* Chevron — right */}
       <div
         style={{
-          flexShrink: 0, width: 24, height: 24,
+          flexShrink: 0, width: 28, height: 28,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: "rgba(255,255,255,0.25)",
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "50%",
+          color: "rgba(255,255,255,0.30)",
+          transition: "color 0.15s, background 0.15s",
         }}
       >
-        <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
-          <path d="M1 1l6 5.5L1 12" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+        <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
+          <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </div>
     </motion.button>
+    </motion.div>
   );
 }
 
@@ -320,7 +524,7 @@ export const SelectAlertTypeOverlay = memo(function SelectAlertTypeOverlay({
         style={{
           position: "fixed", inset: 0, zIndex: 95,
           display: "flex", flexDirection: "column",
-          background: "#000000",
+          background: "#08090c",
           transform: visible ? "translateX(0)" : "translateX(100%)",
           transition: `transform ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? COMPOSITOR_EASE : COMPOSITOR_EASE_CLOSE}`,
           willChange: "transform",
@@ -331,34 +535,49 @@ export const SelectAlertTypeOverlay = memo(function SelectAlertTypeOverlay({
         {/* ── Header ── */}
         <div
           style={{
-            display: "flex", alignItems: "center", gap: 12,
-            padding: "0 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            paddingLeft: 16,
+            paddingRight: 20,
             paddingTop: "env(safe-area-inset-top)",
-            height: "calc(56px + env(safe-area-inset-top))",
+            height: "calc(60px + env(safe-area-inset-top))",
             borderBottom: "1px solid rgba(255,255,255,0.07)",
-            background: "#000000",
+            background: "rgba(8,9,12,0.95)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
             flexShrink: 0,
+            position: "relative",
+            zIndex: 2,
           }}
         >
+          {/* 44×44 circular back button */}
           <button
             onClick={onClose}
             style={{
-              width: 36, height: 36, borderRadius: "50%",
+              width: 44, height: 44, borderRadius: "50%",
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.10)",
               cursor: "pointer",
-              color: "rgba(255,255,255,0.7)",
+              color: "rgba(255,255,255,0.80)",
               flexShrink: 0,
               WebkitTapHighlightColor: "transparent",
+              transition: "background 0.15s, transform 0.12s",
             } as React.CSSProperties}
+            onPointerDown={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"; }}
+            onPointerUp={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"; }}
+            onPointerLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"; }}
           >
-            <ArrowLeft style={{ width: 18, height: 18 }} />
+            <ArrowLeft style={{ width: 19, height: 19 }} />
           </button>
+
           <h1
             style={{
-              fontSize: 17, fontWeight: 700, color: "#ffffff",
+              fontSize: 19, fontWeight: 700, color: "#ffffff",
               margin: 0, flex: 1,
+              letterSpacing: "-0.02em",
+              fontFamily: "'SF Pro Display', 'Inter', system-ui, sans-serif",
             }}
           >
             Select Alert Type
@@ -372,62 +591,69 @@ export const SelectAlertTypeOverlay = memo(function SelectAlertTypeOverlay({
             overflowY: "auto",
             WebkitOverflowScrolling: "touch",
             overscrollBehavior: "contain",
-            paddingBottom: "calc(env(safe-area-inset-bottom) + 32px)",
+            paddingBottom: `calc(env(safe-area-inset-bottom) + 32px)`,
           } as React.CSSProperties}
         >
-          {/* Coin info strip */}
-          <CoinInfoStrip symbol={symbol} />
+          {/* Premium live symbol card */}
+          <PremiumSymbolCard symbol={symbol} />
 
-          {/* Section label */}
+          {/* Section label — 28px gap below card */}
           <div
             style={{
-              padding: "24px 16px 12px",
+              padding: "28px 18px 16px",
               fontSize: 11, fontWeight: 700,
-              color: "rgba(148,163,184,0.45)",
+              color: "rgba(148,163,184,0.40)",
               textTransform: "uppercase",
-              letterSpacing: "0.1em",
+              letterSpacing: "0.12em",
+              fontFamily: "'SF Pro Text', 'Inter', system-ui, sans-serif",
             }}
           >
             Choose alert type
           </div>
 
-          {/* Alert type cards */}
+          {/* Alert type cards — 16px gap */}
           <div
             style={{
-              display: "flex", flexDirection: "column", gap: 12,
+              display: "flex", flexDirection: "column", gap: 16,
               padding: "0 16px",
             }}
           >
+            {/* Trendline */}
             <AlertTypeCard
               index={0}
-              icon={<GitBranch style={{ width: 24, height: 24, color: "#B7FF5A" }} />}
-              iconBg="rgba(183,255,90,0.12)"
+              icon={<GitBranch style={{ width: 28, height: 28, color: "#B7FF5A" }} />}
+              iconBg="linear-gradient(145deg, rgba(183,255,90,0.16) 0%, rgba(183,255,90,0.08) 100%)"
               iconBorder="rgba(183,255,90,0.22)"
+              iconGlow="rgba(183,255,90,0.18)"
               accentColor="#B7FF5A"
               title="Trendline Alerts"
-              subtitle="Trigger when price touches or crosses a trendline."
+              description="Trigger when price touches or crosses a trendline."
               onPress={() => setActiveModal("trendline")}
             />
 
+            {/* Zone */}
             <AlertTypeCard
               index={1}
-              icon={<Layers style={{ width: 24, height: 24, color: "#fb923c" }} />}
-              iconBg="rgba(251,146,60,0.12)"
+              icon={<Layers style={{ width: 28, height: 28, color: "#fb923c" }} />}
+              iconBg="linear-gradient(145deg, rgba(251,146,60,0.16) 0%, rgba(251,146,60,0.08) 100%)"
               iconBorder="rgba(251,146,60,0.22)"
+              iconGlow="rgba(251,146,60,0.18)"
               accentColor="#fb923c"
               title="Zone Alerts"
-              subtitle="Trigger when price enters, exits or touches a price zone."
+              description="Trigger when price enters or exits a defined zone."
               onPress={() => setActiveModal("zone")}
             />
 
+            {/* Price */}
             <AlertTypeCard
               index={2}
-              icon={<Target style={{ width: 24, height: 24, color: "#60a5fa" }} />}
-              iconBg="rgba(96,165,250,0.12)"
+              icon={<Target style={{ width: 28, height: 28, color: "#60a5fa" }} />}
+              iconBg="linear-gradient(145deg, rgba(96,165,250,0.16) 0%, rgba(96,165,250,0.08) 100%)"
               iconBorder="rgba(96,165,250,0.22)"
+              iconGlow="rgba(96,165,250,0.18)"
               accentColor="#60a5fa"
               title="Price Alerts"
-              subtitle="Trigger when price reaches a specific level."
+              description="Trigger when price reaches a specific price level."
               onPress={() => setActiveModal("price")}
             />
           </div>
