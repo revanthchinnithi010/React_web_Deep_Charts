@@ -1241,17 +1241,15 @@ export const SharedMarketSelector = memo(function SharedMarketSelector({
           </div>
         )}
 
-        {/* Safe-area spacer — only when backAction is present (overlay mode) */}
-        {backAction && (
-          <div style={{ height: "env(safe-area-inset-top, 0px)", flexShrink: 0 }} />
-        )}
-
-        {/* Back button row — only when backAction is present */}
+        {/* Back button row — only when backAction is present (overlay/push mode).
+            paddingTop absorbs the device safe-area (status bar) so the arrow
+            and title sit below the notch, not behind it. */}
         {backAction && (
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "0 8px 0 4px",
-            height: 44,
+            paddingTop: "env(safe-area-inset-top, 0px)",
+            height: "calc(44px + env(safe-area-inset-top, 0px))",
             flexShrink: 0,
           }}>
             <button
