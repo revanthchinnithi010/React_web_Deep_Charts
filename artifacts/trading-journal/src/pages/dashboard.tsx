@@ -34,7 +34,7 @@ const tooltipStyle = {
 
 // ── Calendar Heatmap ──────────────────────────────────────────────────────────
 // ── Day Detail Sheet ──────────────────────────────────────────────────────────
-import { COMPOSITOR_EASE as EASE_OPEN, COMPOSITOR_EASE_CLOSE as EASE_CLOSE } from "@/animations/motion";
+import { COMPOSITOR_EASE as EASE_OPEN, COMPOSITOR_EASE_CLOSE as EASE_CLOSE, tweenStandard, TAP_TRANSITION } from "@/animations/motion";
 const DUR_OPEN   = 320; // sheet-level open — larger surface needs more time
 const DUR_CLOSE  = 240;
 
@@ -292,7 +292,7 @@ const DayDetailSheet = memo(function DayDetailSheet({
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 32, stiffness: 320 }}
+              transition={tweenStandard}
               style={{
                 position: "absolute", inset: 0,
                 background: "#000000",
@@ -692,7 +692,7 @@ const Dashboard = memo(function Dashboard() {
       {/* ── Alert button ── */}
       <motion.button
         whileTap={{ scale: 0.95 }}
-        transition={{ duration: 0.1, ease: "easeOut" }}
+        transition={TAP_TRANSITION}
         onClick={() => navigate("/alerts")}
         className="flex flex-col items-center gap-2"
       >

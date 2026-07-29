@@ -5,6 +5,7 @@ import { Wifi, WifiOff, Loader2, ChevronDown } from "lucide-react";
 import { useCurrencyStore, formatAmount } from "@/store/currencyStore";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { AccountSnapshot } from "@/store/accountTypes";
+import { tweenFast, tweenStandard } from "@/animations/motion";
 
 // Balances page numeric styling — dense, professional (Bloomberg/Bybit/Binance
 // Pro/TradingView register), not oversized fintech-card typography. Every
@@ -118,7 +119,7 @@ export default function AccountCard({ account, index = 0 }: Props) {
           >
             <motion.div
               animate={{ rotate: isExpanded ? 0 : -90 }}
-              transition={{ duration: 0.27, ease: "easeInOut" }}
+              transition={tweenFast}
             >
               <ChevronDown className="w-4 h-4 text-muted-foreground/60" />
             </motion.div>
@@ -142,7 +143,7 @@ export default function AccountCard({ account, index = 0 }: Props) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.27, ease: "easeInOut" }}
+            transition={tweenStandard}
             style={{ overflow: "hidden" }}
           >
             <div className="mx-3 mb-3 rounded-xl overflow-hidden bg-muted/30 border border-border/50">

@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useBrokerStore } from "@/store/brokerStore";
 import { motion, AnimatePresence } from "motion/react";
+import { tweenStandard, tweenFast } from "@/animations/motion";
 import {
   Wifi, WifiOff, RefreshCw, CheckCircle2, X, Upload, Shield,
   Lock, Clock, AlertCircle, Zap, FileText, AlertTriangle,
@@ -50,7 +51,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       <motion.div
         className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm"
         animate={{ x: checked ? 22 : 2 }}
-        transition={{ type: "tween", duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+        transition={tweenFast}
       />
     </button>
   );
@@ -205,7 +206,7 @@ function DeltaPanel({
   };
 
   return (
-    <motion.div key="delta" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="space-y-5">
+    <motion.div key="delta" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={tweenStandard} className="space-y-5">
       {/* Security notice */}
       <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
         <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
@@ -267,7 +268,7 @@ function DeltaPanel({
           {/* Progress bar */}
           <AnimatePresence>
             {syncStatus === "syncing" && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-1.5 overflow-hidden">
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={tweenStandard} className="space-y-1.5 overflow-hidden">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-muted-foreground">Connecting to Delta Exchange...</span>
                   <span className="text-[11px] font-semibold text-primary">{syncProgress}%</span>
@@ -405,7 +406,7 @@ function DeltaPanel({
 
 function FusionPanel({ connected: _connected, onConnect: _onConnect, onDisconnect: _onDisconnect }: { connected: boolean; onConnect: () => void; onDisconnect: () => void }) {
   return (
-    <motion.div key="fusion" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="space-y-4">
+    <motion.div key="fusion" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={tweenStandard} className="space-y-4">
       <AnimatedCard className="p-6 space-y-4 text-center">
         <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto">
           <Server className="w-6 h-6 text-blue-400" />
@@ -453,7 +454,7 @@ function GrowwPanel({ connected, onConnect, onDisconnect }: { connected: boolean
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
 
   return (
-    <motion.div key="groww" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="space-y-5">
+    <motion.div key="groww" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={tweenStandard} className="space-y-5">
       <div className="flex items-center gap-3 p-3.5 rounded-xl bg-teal-500/[0.06] border border-teal-500/[0.15]">
         <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0">
           <TrendingUp className="w-4 h-4 text-teal-400" />
@@ -598,7 +599,7 @@ function CTraderPanel() {
   };
 
   return (
-    <motion.div key="ctrader" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="space-y-5">
+    <motion.div key="ctrader" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={tweenStandard} className="space-y-5">
       {/* OAuth Config Card */}
       <AnimatedCard className="p-5 space-y-4">
         <div className="flex items-center gap-2 mb-1">

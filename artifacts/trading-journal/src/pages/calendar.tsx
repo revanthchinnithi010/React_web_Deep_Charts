@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useGetCalendarHeatmap, useListTrades } from "@workspace/api-client-react";
 import { useCurrencyFormatter } from "@/store/currencyStore";
 import { motion, AnimatePresence } from "motion/react";
+import { tweenFast, COMPOSITOR_EASE } from "@/animations/motion";
 import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Calendar, BarChart2,
   ArrowLeft, ExternalLink, ImageIcon, Tag, AlertTriangle, FileText,
@@ -338,7 +339,7 @@ const TradeDetailSheet = memo(function TradeDetailSheet({ trade, onClose, fc }: 
           "--tw-enter-opacity"     : "0.96",
           "--tw-exit-opacity"      : "0",
           animationDuration        : "220ms",
-          animationTimingFunction  : "cubic-bezier(0.25,0.46,0.45,0.94)",
+          animationTimingFunction  : COMPOSITOR_EASE,
         } as React.CSSProperties}
       >
         {trade && (
@@ -672,7 +673,7 @@ export default function CalendarPage() {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.25 }}
+              transition={tweenFast}
               className="space-y-2"
             >
               {weeklyRows.map((row, rowIdx) => {
@@ -738,9 +739,10 @@ export default function CalendarPage() {
                           <AnimatePresence>
                             {isHovered && hasData && (
                               <motion.div
-                                initial={{ opacity: 0, scale: 0.9, y: 5 }}
+                                initial={{ opacity: 0, scale: 0.96, y: 4 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 5 }}
+                                exit={{ opacity: 0, scale: 0.96, y: 4 }}
+                                transition={tweenFast}
                                 className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 pointer-events-none"
                               >
                                 <div className="glass-modal px-3 py-2 text-[11px] whitespace-nowrap rounded-xl">

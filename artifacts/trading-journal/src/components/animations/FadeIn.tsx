@@ -15,7 +15,7 @@ import {
   slideLeftVariants,
   slideRightVariants,
   scaleVariants,
-  SPRING_SMOOTH,
+  tweenStandard,
 } from "@/animations/motion";
 
 export type FadeInVariant =
@@ -76,7 +76,7 @@ export function FadeIn({
         visible: {
           ...(variants.visible as object),
           transition: {
-            ...SPRING_SMOOTH,
+            ...tweenStandard,
             ...((variants.visible as Record<string, unknown>).transition ?? {}),
             delay,
           },

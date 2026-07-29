@@ -13,6 +13,7 @@
  */
 
 import React, { memo, useEffect, useRef, useState, useCallback } from "react";
+import { COMPOSITOR_EASE } from "@/animations/motion";
 import {
   ArrowLeft, Volume2, VolumeX, Music, Timer, ChevronRight, Check,
 } from "lucide-react";
@@ -218,7 +219,7 @@ function ToggleRow({
             top: 3, left: value ? 23 : 3,
             width: 20, height: 20, borderRadius: "50%",
             background: value ? "#1e1b4b" : "rgba(255,255,255,0.70)",
-            transition: "left 200ms cubic-bezier(0.22,1,0.36,1)",
+            transition: `left 200ms ${COMPOSITOR_EASE}`,
           }} />
         </div>
       </button>

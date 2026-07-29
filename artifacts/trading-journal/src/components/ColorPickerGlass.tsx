@@ -199,7 +199,7 @@ export const ColorPickerGlass = memo(function ColorPickerGlass({
           border:         "1px solid rgba(255,255,255,0.08)",
           borderRadius:   12,
           boxShadow:      "0 8px 40px rgba(0,0,0,0.65), 0 2px 8px rgba(0,0,0,0.4)",
-          animation:      `cpop-${uid} .15s cubic-bezier(0.16,1,0.3,1)`,
+          animation:      `cpop-${uid} .15s ${EASE_OPEN}`,
           padding:        "10px 10px 12px",
           userSelect:     "none",
         }}

@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { motion } from "motion/react";
+import { TAP_TRANSITION, tweenFast } from "@/animations/motion";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
@@ -146,7 +147,7 @@ export function MobileBottomNav() {
                 <motion.div
                   className="tj-cnav-tab"
                   whileTap={{ scale: 0.97 }}
-                  transition={{ type: "tween", duration: 0.09, ease: "easeOut" }}
+                  transition={TAP_TRANSITION}
                   style={{
                     width:          "100%",
                     height:         "100%",
@@ -161,7 +162,7 @@ export function MobileBottomNav() {
                 >
                   <motion.div
                     animate={{ scale: active ? 1.12 : 1 }}
-                    transition={{ type: "tween", duration: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    transition={tweenFast}
                     style={{ position: "relative" }}
                   >
                     <tab.Icon

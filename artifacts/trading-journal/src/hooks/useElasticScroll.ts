@@ -1,4 +1,5 @@
 import { useEffect, type RefObject } from "react";
+import { COMPOSITOR_EASE } from "@/animations/motion";
 
 /**
  * iOS-style rubber-band / elastic overscroll — optimised for 60 fps.
@@ -24,7 +25,7 @@ export function useElasticScroll(
 
     const MAX_PULL     = 72;   // px — max visible stretch
     const SPRING_MS    = 480;  // release animation duration
-    const SPRING_CB    = "cubic-bezier(0.22, 1, 0.36, 1)";
+    const SPRING_CB    = COMPOSITOR_EASE;
     const WHEEL_DAMPEN = 0.35;
     const WHEEL_SETTLE = 180;  // ms after last wheel event → spring back
 

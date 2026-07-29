@@ -1,96 +1,117 @@
+/**
+ * Animation Variants — component-specific variant sets built on top of the
+ * canonical motion tokens defined in @/animations/motion.
+ *
+ * Also re-exports the most commonly needed tokens so consumers can import
+ * from either file without worrying about which one defines what.
+ *
+ * Do not hard-code durations, easings, or offset values here.
+ * Every animation value must derive from an imported token.
+ */
 import type { Variants } from "motion/react";
+import {
+  tweenFast,
+  tweenStandard,
+  tweenLarge,
+  tweenFastExit,
+} from "@/animations/motion";
 
-// ─── Timing ──────────────────────────────────────────────────────────────────
-// All durations in seconds for Framer Motion
-const FAST     = 0.15; // 150ms — quick interactions, exits
-const STANDARD = 0.22; // 220ms — standard transitions
-const LARGE    = 0.25; // 250ms — large surfaces, page-level
+// ─────────────────────────────────────────────────────────────────────────────
+// Re-exports — common tokens available from either animation file
+// ─────────────────────────────────────────────────────────────────────────────
+export {
+  EASE,
+  EASE_EXIT,
+  EASE_PREMIUM,
+  DUR_FAST,
+  DUR_STANDARD,
+  DUR_LARGE,
+  tweenFast,
+  tweenStandard,
+  tweenLarge,
+  tweenFastExit,
+  tweenStandardExit,
+  TAP_TRANSITION,
+  SPRING_FAST,
+  SPRING_SMOOTH,
+  SPRING_PANEL,
+  SPRING_MODAL,
+  SPRING_SNAPPY,
+} from "@/animations/motion";
 
-// ─── Easing ──────────────────────────────────────────────────────────────────
-// Single easing curve used across every variant — smooth ease-out
-export const EASE_PREMIUM = [0.22, 1, 0.36, 1] as const;
+// ─────────────────────────────────────────────────────────────────────────────
+// Bottom navigation bar
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Shared transition builders ───────────────────────────────────────────────
-const tweenFast     = { type: "tween", duration: FAST,     ease: EASE_PREMIUM } as const;
-const tweenStandard = { type: "tween", duration: STANDARD, ease: EASE_PREMIUM } as const;
-const tweenLarge    = { type: "tween", duration: LARGE,    ease: EASE_PREMIUM } as const;
-
-// ─── Backward-compatible spring exports ───────────────────────────────────────
-// Kept so existing imports don't break; prefer tween variants below for new use.
-export const SPRING_SMOOTH = { type: "spring", stiffness: 180, damping: 24, mass: 0.9 } as const;
-export const SPRING_SNAPPY = { type: "spring", stiffness: 220, damping: 18            } as const;
-export const SPRING_PANEL  = { type: "spring", stiffness: 140, damping: 22            } as const;
-export const SPRING_MODAL  = { type: "spring", stiffness: 160, damping: 20            } as const;
-
-// ─── Variants ─────────────────────────────────────────────────────────────────
-
-/** Bottom navigation bar — slides in from below, no scale or blur. */
+/** Bottom navigation bar — slides in from below on mount. */
 export const bottomBarVariants: Variants = {
-  hidden: {
-    opacity: 0,
-    y: 20,
-  },
+  hidden:  { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: {
-      ...tweenLarge,
-      staggerChildren: 0.04,
-    },
+    transition: { ...tweenLarge, staggerChildren: 0.04 },
   },
 };
 
-/** Individual items inside the bottom bar — card-style: fade + 6px upward. */
+/** Individual tab item inside the bottom nav bar. */
 export const barItemVariants: Variants = {
-  hidden:  { opacity: 0, y: 6  },
+  hidden:  { opacity: 0, y: 6 },
   visible: { opacity: 1, y: 0, transition: tweenStandard },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Layout panels
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** Left panel / sidebar drawer — horizontal slide only. */
 export const leftPanelVariants: Variants = {
   hidden:  { x: -80, opacity: 0 },
-  visible: {
-    x: 0,
-    opacity: 1,
-    transition: tweenLarge,
-  },
-  exit: {
-    x: -80,
-    opacity: 0,
-    transition: tweenFast,
-  },
+  visible: { x: 0,   opacity: 1, transition: tweenLarge    },
+  exit:    { x: -80, opacity: 0, transition: tweenFastExit },
 };
 
-/** Floating mini toolbar — modal-style: fade + slight scale. */
+/** Floating mini toolbar — fade + subtle scale. */
 export const miniToolbarVariants: Variants = {
   hidden:  { scale: 0.98, opacity: 0 },
-  visible: { scale: 1,    opacity: 1, transition: tweenFast },
-  exit:    { scale: 0.98, opacity: 0, transition: tweenFast },
+  visible: { scale: 1,    opacity: 1, transition: tweenFast     },
+  exit:    { scale: 0.98, opacity: 0, transition: tweenFastExit },
 };
 
-/** Stagger list items — card-style: fade + 6px upward. */
+// ─────────────────────────────────────────────────────────────────────────────
+// List / stagger patterns
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Stagger child items — fade + 6 px upward reveal. */
 export const staggerItemVariants: Variants = {
   hidden:  { opacity: 0, y: 6 },
   visible: { opacity: 1, y: 0, transition: tweenStandard },
 };
 
-/** Modal / dialog — fade + scale 0.98 → 1 on enter, reverse on exit. */
+// ─────────────────────────────────────────────────────────────────────────────
+// Modals / overlays
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Modal / dialog — fade + scale 0.98 → 1. */
 export const modalVariants: Variants = {
   hidden:  { opacity: 0, scale: 0.98 },
   visible: { opacity: 1, scale: 1,    transition: tweenStandard },
-  exit:    { opacity: 0, scale: 0.98, transition: tweenFast     },
+  exit:    { opacity: 0, scale: 0.98, transition: tweenFastExit },
 };
 
 /** Backdrop / overlay — fade only. */
 export const overlayVariants: Variants = {
   hidden:  { opacity: 0 },
   visible: { opacity: 1, transition: tweenStandard },
-  exit:    { opacity: 0, transition: tweenFast     },
+  exit:    { opacity: 0, transition: tweenFastExit },
 };
 
-/** Page / card float-up — fade + 8px vertical slide. */
+// ─────────────────────────────────────────────────────────────────────────────
+// Generic reveal
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Fade + 8 px upward slide — the default content reveal. */
 export const floatUpVariants: Variants = {
   hidden:  { opacity: 0, y: 8 },
   visible: { opacity: 1, y: 0, transition: tweenStandard },
-  exit:    { opacity: 0, y: 8, transition: tweenFast     },
+  exit:    { opacity: 0, y: 8, transition: tweenFastExit },
 };

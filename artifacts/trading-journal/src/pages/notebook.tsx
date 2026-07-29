@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash, Search } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { tweenStandard } from "@/animations/motion";
 import { 
   PageTransition, 
   AnimatedPresenceList, 
@@ -139,10 +140,10 @@ export default function Notebook() {
           {selectedNote ? (
             <motion.div
               key={selectedNote.id}
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={tweenStandard}
               className="flex-1 flex flex-col overflow-hidden"
             >
               <div className="p-4 border-b border-white/10 flex items-center justify-between shrink-0">

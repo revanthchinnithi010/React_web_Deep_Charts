@@ -33,21 +33,15 @@
 import type { Variants } from "motion/react";
 import { motion } from "motion/react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-
-// ─── Timing & easing ──────────────────────────────────────────────────────────
-const EASE_OUT = [0.25, 0.46, 0.45, 0.94] as const; // smooth deceleration
-const EASE_IN  = [0.4,  0,    1,    1   ] as const; // smooth acceleration
-
-const ENTER: object = { type: "tween", duration: 0.22, ease: EASE_OUT };
-const EXIT:  object = { type: "tween", duration: 0.18, ease: EASE_IN  };
+import { tweenStandard, tweenFastExit } from "@/animations/motion";
 
 // ─── Page variants ────────────────────────────────────────────────────────────
 
 /** Standard pages — fade + 8px vertical slide. */
 const pageVariants: Variants = {
-  initial: { opacity: 0, y: 8  },
-  enter:   { opacity: 1, y: 0, transition: ENTER },
-  exit:    { opacity: 0, y: 8, transition: EXIT  },
+  initial: { opacity: 0, y: 8 },
+  enter:   { opacity: 1, y: 0, transition: tweenStandard },
+  exit:    { opacity: 0, y: 8, transition: tweenFastExit },
 };
 
 /**
@@ -56,8 +50,8 @@ const pageVariants: Variants = {
  */
 const tabPageVariants: Variants = {
   initial: { opacity: 0 },
-  enter:   { opacity: 1, transition: ENTER },
-  exit:    { opacity: 0, transition: EXIT  },
+  enter:   { opacity: 1, transition: tweenStandard },
+  exit:    { opacity: 0, transition: tweenFastExit },
 };
 
 /**
@@ -66,8 +60,8 @@ const tabPageVariants: Variants = {
  */
 const pageDetailCoverVariants: Variants = {
   initial: { opacity: 0.96, y: 0 },
-  enter:   { opacity: 1,    y: 0, transition: ENTER },
-  exit:    { opacity: 0,    y: 0, transition: EXIT  },
+  enter:   { opacity: 1,    y: 0, transition: tweenStandard },
+  exit:    { opacity: 0,    y: 0, transition: tweenFastExit },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────

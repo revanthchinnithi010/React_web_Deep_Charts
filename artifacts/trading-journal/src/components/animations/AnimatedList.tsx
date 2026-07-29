@@ -7,7 +7,7 @@
  */
 import { motion, AnimatePresence } from "motion/react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { listContainerVariants, listItemVariants } from "@/animations/motion";
+import { listContainerVariants, listItemVariants, TAP_TRANSITION } from "@/animations/motion";
 
 interface AnimatedListProps {
   children: React.ReactNode;
@@ -83,7 +83,7 @@ export function AnimatedListItem({
       style={{ ...style, willChange: tappable ? "transform" : undefined }}
       onClick={onClick}
       whileTap={tappable ? { scale: 0.97 } : undefined}
-      transition={tappable ? { type: "tween", duration: 0.09, ease: "easeOut" } : undefined}
+      transition={tappable ? TAP_TRANSITION : undefined}
     >
       {children}
     </MotionTag>

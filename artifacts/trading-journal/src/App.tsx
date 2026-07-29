@@ -12,6 +12,7 @@ import { LiveMarketProvider } from "@/contexts/LiveMarketContext";
 import { WatchlistProvider } from "@/contexts/WatchlistContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { motion, AnimatePresence } from "motion/react";
+import { COMPOSITOR_EASE, COMPOSITOR_OVERLAY_DURATION_OPEN, COMPOSITOR_OVERLAY_DURATION_ENTER_TRANSFORM } from "@/animations/motion";
 import { PageTransition } from "@/components/animations/PageTransition";
 import { SplashScreen } from "@/components/animations/SplashScreen";
 import { getSymbolBreakdown, getGetSymbolBreakdownQueryKey } from "@workspace/api-client-react";
@@ -486,7 +487,7 @@ function PositionDetailWrapper() {
             ? "translate3d(0,0,0) scale(1)"
             : "translate3d(0,56px,0) scale(0.97)",
           transition:               visible
-            ? "opacity 0.24s cubic-bezier(0.22,1,0.36,1), transform 0.34s cubic-bezier(0.22,1,0.36,1)"
+            ? `opacity ${COMPOSITOR_OVERLAY_DURATION_OPEN} ${COMPOSITOR_EASE}, transform ${COMPOSITOR_OVERLAY_DURATION_ENTER_TRANSFORM} ${COMPOSITOR_EASE}`
             : "none",
           willChange:               "transform, opacity",
           backfaceVisibility:       "hidden",

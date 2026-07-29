@@ -48,8 +48,10 @@ import {
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+import { COMPOSITOR_EASE, COMPOSITOR_EASE_CLOSE } from "@/animations/motion";
+
 // Spring easing for sheet snap transitions — matches BottomSheet in MobileChartLayout
-const SMS_SNAP_SPRING = "transform 0.22s cubic-bezier(0.22,1,0.36,1)";
+const SMS_SNAP_SPRING = `transform 0.22s ${COMPOSITOR_EASE}`;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -717,7 +719,7 @@ export const SharedMarketSelector = memo(function SharedMarketSelector({
     const bd    = backdropRef.current;
     if (!sheet) { onCloseRef.current?.(); return; }
     const offY = window.innerHeight + 20;
-    sheet.style.transition = "transform 0.16s cubic-bezier(0.40,0,0.80,0.60)";
+    sheet.style.transition = `transform 0.16s ${COMPOSITOR_EASE_CLOSE}`;
     sheet.style.transform  = `translateY(${offY}px)`;
     if (bd) { bd.style.transition = "opacity 0.16s ease"; bd.style.opacity = "0"; }
     setTimeout(() => onCloseRef.current?.(), 165);
@@ -911,7 +913,7 @@ export const SharedMarketSelector = memo(function SharedMarketSelector({
     r1 = requestAnimationFrame(() => {
       r2 = requestAnimationFrame(() => {
         computeSnaps();
-        animateTo(snapYRef.current.full, "transform 0.28s cubic-bezier(0.22,1,0.36,1)");
+        animateTo(snapYRef.current.full, `transform 0.28s ${COMPOSITOR_EASE}`);
         // Unlock scroll once animation has settled
         setTimeout(() => applySnapDom("full"), 280);
       });

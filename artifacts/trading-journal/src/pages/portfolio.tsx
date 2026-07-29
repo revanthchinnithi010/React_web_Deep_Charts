@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { COMPOSITOR_EASE } from "@/animations/motion";
 import { useSearch, useLocation } from "wouter";
 import {
   TrendingUp, ArrowLeft,
@@ -295,7 +296,7 @@ function SegmentedControl({ tabs, active, onChange }: {
           border: "1px solid rgba(255, 255, 255, 0.10)",
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 20px rgba(0,0,0,0.35)",
           transform: `translate3d(calc(${activeIndex} * (100% + ${4 / n}px)), 0, 0)`,
-          transition: "transform 200ms cubic-bezier(0.16, 1, 0.3, 1)",
+          transition: `transform 200ms ${COMPOSITOR_EASE}`,
           willChange: "transform",
           backfaceVisibility: "hidden",
         }}

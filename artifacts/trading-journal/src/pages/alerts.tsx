@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { tweenFast, tweenStandard, TAP_TRANSITION } from "@/animations/motion";
 import {
   NOTIFICATION_HISTORY, TIMEFRAMES, SYMBOLS,
   type PriceAlert, type ZoneAlert, type TrendlineAlert,
@@ -108,7 +109,7 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 8 }} transition={{ type: "tween", duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+      exit={{ opacity: 0, y: 8 }} transition={tweenStandard}
       className="fixed right-4 top-16 w-80 z-50 rounded-2xl border border-white/[0.08] shadow-2xl overflow-hidden"
       style={{ background: "hsl(var(--card))" }}
     >
@@ -439,7 +440,7 @@ const CreateTrendlineAlertModal = memo(function CreateTrendlineAlertModal({ onCl
           </FieldRow>
         </div>
         {slope && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={tweenFast}
             className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3">
             {slope === "ascending"
               ? <TrendingUp className="w-5 h-5 text-primary flex-shrink-0" />
@@ -490,7 +491,7 @@ const CreateTrendlineAlertModal = memo(function CreateTrendlineAlertModal({ onCl
         <AnimatePresence>
           {timeInvalid && (
             <motion.div
-              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={tweenFast}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
               <p className="text-[11px] text-amber-400">Point 2 time must be after Point 1</p>
@@ -537,7 +538,7 @@ function AddAlertPillButton({ label, onClick }: { label: string; onClick: () => 
   return (
     <motion.button
       whileTap={{ scale: 0.97 }}
-      transition={{ type: "tween", duration: 0.09, ease: "easeOut" }}
+      transition={TAP_TRANSITION}
       onClick={onClick}
       style={{
         display: "inline-flex",
@@ -1318,7 +1319,7 @@ export default function Alerts() {
           <AnimatePresence mode="wait">
             {/* Price Alerts */}
             {tab === "price" && (
-              <motion.div key="price" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+              <motion.div key="price" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={tweenFast}>
                 <AnimatedPresenceList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {priceAlerts.map(a => <PriceAlertCard key={a.id} alert={a} onTogglePause={togglePause} onDelete={deleteAlert} />)}
                   <div className="rounded-xl border border-dashed border-white/[0.1] flex items-center justify-center min-h-[120px]">
@@ -1330,7 +1331,7 @@ export default function Alerts() {
 
             {/* Zone Alerts */}
             {tab === "zone" && (
-              <motion.div key="zone" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+              <motion.div key="zone" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={tweenFast}>
                 <AnimatedPresenceList className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {zoneAlerts.map(a => <ZoneAlertCard key={a.id} alert={a} onTogglePause={togglePause} onDelete={deleteAlert} />)}
                   <div className="rounded-xl border border-dashed border-white/[0.1] flex items-center justify-center min-h-[120px]">
@@ -1342,7 +1343,7 @@ export default function Alerts() {
 
             {/* Trendline Alerts */}
             {tab === "trendline" && (
-              <motion.div key="trendline" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+              <motion.div key="trendline" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={tweenFast}>
                 <AnimatedPresenceList className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {trendlineAlerts.map(a => <TrendlineAlertCard key={a.id} alert={a} onTogglePause={togglePause} onDelete={deleteAlert} />)}
                   <div className="rounded-xl border border-dashed border-white/[0.1] flex items-center justify-center min-h-[120px]">
@@ -1354,7 +1355,7 @@ export default function Alerts() {
 
             {/* All Alerts Table */}
             {tab === "table" && (
-              <motion.div key="table" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
+              <motion.div key="table" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={tweenFast}>
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   {(["all", "active", "triggered", "paused"] as const).map(f => (
                     <button key={f} onClick={() => setFilterStatus(f)}

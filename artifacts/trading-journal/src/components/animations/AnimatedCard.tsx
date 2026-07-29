@@ -5,7 +5,7 @@
  */
 import { motion } from "motion/react";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { cardVariants } from "@/animations/motion";
+import { cardVariants, TAP_TRANSITION } from "@/animations/motion";
 
 interface AnimatedCardProps {
   children: React.ReactNode;
@@ -56,7 +56,7 @@ export function AnimatedCard({
       viewport={inView ? viewport : undefined}
       whileHover={hoverable ? { y: -3, scale: 1.015 } : undefined}
       whileTap={hoverable ? { scale: 0.97 } : undefined}
-      transition={{ tap: { type: "tween", duration: 0.09, ease: "easeOut" } }}
+      transition={{ tap: TAP_TRANSITION }}
       onClick={onClick}
     >
       {children}
