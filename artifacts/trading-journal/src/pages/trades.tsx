@@ -1289,7 +1289,7 @@ export default function Trades() {
           </div>
 
         ) : (
-          <div>
+          <AnimatedList>
             {filteredTrades.map((trade, idx) => {
               const isLast    = idx === filteredTrades.length - 1;
               const rr        = trade.riskRewardRatio || 0;
@@ -1300,18 +1300,16 @@ export default function Trades() {
               const fPrice    = (v: number) => v < 1 ? v.toFixed(4) : v.toLocaleString(undefined, { maximumFractionDigits: 1 });
 
               return (
-                <div
+                <AnimatedListItem
                   key={trade.id}
+                  index={idx}
                   onClick={() => setSelectedTradeId(trade.id)}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:bg-white/[0.025]"
                   style={{
                     padding:                 "12px 8px",
                     borderBottom:            isLast ? "none" : "1px solid rgba(255,255,255,0.12)",
                     WebkitTapHighlightColor: "transparent",
-                    transition:              "background 0.15s",
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
                   <div>
                   {/* Row 1 — Symbol + side badge | PNL */}
@@ -1367,10 +1365,10 @@ export default function Trades() {
                     </span>
                   </div>
                   </div>
-                </div>
+                </AnimatedListItem>
               );
             })}
-          </div>
+          </AnimatedList>
         )}
 
         {/* Pagination */}

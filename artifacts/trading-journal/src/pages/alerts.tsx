@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { tweenFast, tweenStandard, TAP_TRANSITION } from "@/animations/motion";
+import { tweenFast, tweenStandard, TAP_TRANSITION, listItemVariants } from "@/animations/motion";
 import {
   NOTIFICATION_HISTORY, TIMEFRAMES, SYMBOLS,
   type PriceAlert, type ZoneAlert, type TrendlineAlert,
@@ -674,8 +674,8 @@ function Select({ value, onChange, options }: { value: string; onChange: (v: str
 }
 
 // ─── Alert Table Row ───────────────────────────────────────────────────────────
-function AlertRow({ alert, onTogglePause, onDelete }: {
-  alert: AnyAlert; onTogglePause: (id: string) => void; onDelete: (id: string) => void;
+function AlertRow({ alert, onTogglePause, onDelete, index }: {
+  alert: AnyAlert; onTogglePause: (id: string) => void; onDelete: (id: string) => void; index: number;
 }) {
   const isPaused = alert.status === "paused";
   const isActive = alert.status === "active";
@@ -695,11 +695,17 @@ function AlertRow({ alert, onTogglePause, onDelete }: {
   };
 
   return (
-    <tr className={cn(
-      "group border-b border-white/[0.04] transition-colors",
-      alert.status === "triggered" && "bg-primary/[0.03]",
-      alert.status === "active"    && "hover:bg-white/[0.02]",
-    )}>
+    <motion.tr
+      className={cn(
+        "group border-b border-white/[0.04] transition-colors",
+        alert.status === "triggered" && "bg-primary/[0.03]",
+        alert.status === "active"    && "hover:bg-white/[0.02]",
+      )}
+      variants={listItemVariants}
+      custom={index}
+      initial="hidden"
+      animate="visible"
+    >
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           {alert.status === "active"    && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse flex-shrink-0" />}
@@ -742,13 +748,13 @@ function AlertRow({ alert, onTogglePause, onDelete }: {
           </button>
         </div>
       </td>
-    </tr>
+    </motion.tr>
   );
 }
 
 // ─── Price Alert Card ──────────────────────────────────────────────────────────
-function PriceAlertCard({ alert, onTogglePause, onDelete }: {
-  alert: PriceAlert; onTogglePause: (id: string) => void; onDelete: (id: string) => void;
+function PriceAlertCard({ alert, onTogglePause, onDelete, index }: {
+  alert: PriceAlert; onTogglePause: (id: string) => void; onDelete: (id: string) => void; index: number;
 }) {
   const pct = alert.currentPrice > 0
     ? ((alert.targetPrice - alert.currentPrice) / alert.currentPrice * 100).toFixed(2)
@@ -756,6 +762,7 @@ function PriceAlertCard({ alert, onTogglePause, onDelete }: {
 
   return (
     <AnimatedListItem
+      index={index}
       className={cn(
         "p-4 transition-all group",
         alert.status === "triggered" ? "glass-card border-primary/30 !bg-primary/[0.06] shadow-primary/10"
@@ -796,8 +803,8 @@ function PriceAlertCard({ alert, onTogglePause, onDelete }: {
 }
 
 // ─── Zone Alert Card ───────────────────────────────────────────────────────────
-function ZoneAlertCard({ alert, onTogglePause, onDelete }: {
-  alert: ZoneAlert; onTogglePause: (id: string) => void; onDelete: (id: string) => void;
+function ZoneAlertCard({ alert, onTogglePause, onDelete, index }: {
+  alert: ZoneAlert; onTogglePause: (id: string) => void; onDelete: (id: string) => void; index: number;
 }) {
   const zoneColors: Record<ZoneAlert["zoneType"], string> = {
     supply: "text-red-400", demand: "text-emerald-400",

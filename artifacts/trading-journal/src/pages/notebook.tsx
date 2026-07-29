@@ -113,8 +113,8 @@ export default function Notebook() {
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           <AnimatedPresenceList className="space-y-1">
-            {(filteredNotes || []).map(note => (
-              <AnimatedListItem key={note.id}>
+            {(filteredNotes || []).map((note, idx) => (
+              <AnimatedListItem key={note.id} index={idx}>
                 <button
                   onClick={() => setSelectedNoteId(note.id)}
                   className={`w-full text-left p-3 rounded-lg transition-colors ${

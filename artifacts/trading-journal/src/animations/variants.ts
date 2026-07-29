@@ -37,6 +37,8 @@ export {
   SPRING_PANEL,
   SPRING_MODAL,
   SPRING_SNAPPY,
+  STAGGER_CHILD_DELAY,
+  STAGGER_MAX_DELAY,
 } from "@/animations/motion";
 
 // ─────────────────────────────────────────────────────────────────────────────

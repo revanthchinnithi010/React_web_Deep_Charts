@@ -626,10 +626,10 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {symbolStats.map(s => {
+                  {symbolStats.map((s, idx) => {
                     const avgPnl = s.trades > 0 ? s.pnl / s.trades : 0;
                     return (
-                      <tr key={s.symbol} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors group">
+                      <AnimatedListItem key={s.symbol} as="tr" index={idx} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors group">
                         <td className="px-4 py-3 font-bold text-white text-xs">{s.symbol}</td>
                         <td className="px-4 py-3"><ProviderBadge symbol={s.symbol} /></td>
                         <td className="px-4 py-3 text-right font-mono text-[11px] text-muted-foreground">{s.trades}</td>
@@ -649,7 +649,7 @@ export default function Reports() {
                         <td className={`px-4 py-3 text-right font-mono text-[11px] ${avgPnl >= 0 ? "text-emerald-400/80" : "text-red-400/80"}`}>
                           {fc(avgPnl)}
                         </td>
-                      </tr>
+                      </AnimatedListItem>
                     );
                   })}
                 </tbody>

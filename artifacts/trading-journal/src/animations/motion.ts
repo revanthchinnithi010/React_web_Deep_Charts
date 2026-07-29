@@ -187,19 +187,37 @@ export const dialogVariants: Variants = {
 
 /**
  * Card entrance with optional stagger index.
- * Each +1 on `index` adds 40 ms delay so lists of cards cascade in.
+ * Each +1 on `index` adds 25 ms delay (capped at 75 ms) so cards cascade
+ * in without the total animation exceeding 295 ms on long grids.
  */
 export const cardVariants: Variants = {
   hidden:  { opacity: 0, y: 6, scale: 0.98 },
   visible: (i: number = 0) => ({
     opacity: 1, y: 0, scale: 1,
-    transition: { ...tweenStandard, delay: i * 0.04 },
+    transition: {
+      type:     "tween",
+      duration: DUR_STANDARD,
+      ease:     EASE,
+      delay:    Math.min(i * STAGGER_CHILD_DELAY, STAGGER_MAX_DELAY),
+    },
   }),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 8 · Lists
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Stagger delay per child item — 25 ms gap between successive list items.
+ * Pass the item's index as `custom` on each motion element.
+ */
+export const STAGGER_CHILD_DELAY = 0.025; // 25 ms
+
+/**
+ * Maximum stagger delay — caps at the 3rd item (75 ms).
+ * Ensures total animation time stays ≤ 75 + 220 = 295 ms even on long lists.
+ */
+export const STAGGER_MAX_DELAY = 0.075; // 75 ms
 
 /** List container — fades in as a unit. */
 export const listContainerVariants: Variants = {
@@ -208,10 +226,26 @@ export const listContainerVariants: Variants = {
   exit:    { opacity: 0, transition: tweenFastExit },
 };
 
-/** Individual list item — subtle upward reveal. */
+/**
+ * Individual list item — subtle upward reveal with index-based stagger.
+ * Use `custom={index}` on the motion element so each child cascades 25 ms
+ * after the previous one (capped at 75 ms total delay).
+ *
+ * GPU-safe: opacity + transform only. No scale, no bounce.
+ * Offset: 6 px (≤ spec maximum of 6 px).
+ */
 export const listItemVariants: Variants = {
-  hidden:  { opacity: 0, y: 4 },
-  visible: { opacity: 1, y: 0, transition: tweenStandard },
+  hidden:  { opacity: 0, y: 6 },
+  visible: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      type:     "tween",
+      duration: DUR_STANDARD,
+      ease:     EASE,
+      delay:    Math.min(i * STAGGER_CHILD_DELAY, STAGGER_MAX_DELAY),
+    },
+  }),
   exit:    { opacity: 0, y: 2, transition: tweenFastExit },
 };
 

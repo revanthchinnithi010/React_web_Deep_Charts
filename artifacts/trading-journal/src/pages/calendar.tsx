@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Calendar, BarChart2,
   ArrowLeft, ExternalLink, ImageIcon, Tag, AlertTriangle, FileText,
 } from "lucide-react";
-import { PageTransition, AnimatedCard } from "@/components/animations";
+import { PageTransition, AnimatedCard, AnimatedList, AnimatedListItem } from "@/components/animations";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { TV_LINKS } from "@/data/sampleData";
@@ -243,12 +243,12 @@ const DailySummarySheet = memo(function DailySummarySheet({
               <p className="text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>No trades on this day</p>
             </div>
           ) : (
-            <div className="px-3 py-3 space-y-2">
+            <AnimatedList className="px-3 py-3 space-y-2">
               {trades.map((trade, idx) => {
                 const isWin = trade.pnl >= 0;
                 return (
+                  <AnimatedListItem key={trade.id} index={idx}>
                   <div
-                    key={trade.id}
                     onClick={() => onSelectTrade(trade.id)}
                     style={{
                       background: "rgba(255,255,255,0.035)",
@@ -305,9 +305,10 @@ const DailySummarySheet = memo(function DailySummarySheet({
                       )}
                     </div>
                   </div>
+                  </AnimatedListItem>
                 );
               })}
-            </div>
+            </AnimatedList>
           )}
         </div>
       </div>

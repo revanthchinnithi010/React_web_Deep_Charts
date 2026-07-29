@@ -66,7 +66,7 @@ export function AnimatedListItem({
   as = "div",
   onClick,
   tappable = false,
-  index: _index,
+  index = 0,
 }: AnimatedListItemProps) {
   const reduced = useReducedMotion();
   const Tag = as as "div";
@@ -80,8 +80,13 @@ export function AnimatedListItem({
   return (
     <MotionTag
       className={className}
-      style={{ ...style, willChange: tappable ? "transform" : undefined }}
+      style={{ ...style, willChange: "transform, opacity" }}
       onClick={onClick}
+      variants={listItemVariants}
+      custom={index}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       whileTap={tappable ? { scale: 0.97 } : undefined}
       transition={tappable ? TAP_TRANSITION : undefined}
     >
@@ -154,6 +159,7 @@ export function AnimatedPresenceList<T>({
           <motion.div
             key={keyExtractor ? keyExtractor(item) : i}
             variants={listItemVariants}
+            custom={i}
             initial="hidden"
             animate="visible"
             exit="exit"
