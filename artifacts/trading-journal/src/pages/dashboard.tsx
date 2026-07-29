@@ -18,6 +18,7 @@ import { useChartStore } from "@/store/chartStore";
 import {
   PageTransition,
 } from "@/components/animations";
+import { AppHeader } from "@/components/AppHeader";
 
 // Lazy-loaded so it doesn't pull Alerts into the Dashboard chunk
 const AlertsPage  = lazy(() => import("@/pages/alerts"));
@@ -100,34 +101,7 @@ const DashboardAlertsOverlay = memo(function DashboardAlertsOverlay() {
         }}
       >
         {/* ── Header ── */}
-        <div
-          style={{
-            display: "flex", alignItems: "center", gap: 12,
-            padding: "0 16px",
-            paddingTop: "env(safe-area-inset-top)",
-            height: "calc(56px + env(safe-area-inset-top))",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
-            background: "#000000",
-            flexShrink: 0,
-          }}
-        >
-          <button
-            onClick={() => setOpenRef.current(false)}
-            style={{
-              width: 32, height: 32, borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "transparent", border: "none", cursor: "pointer",
-              color: "rgba(255,255,255,0.6)",
-              flexShrink: 0,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <ArrowLeft style={{ width: 20, height: 20 }} />
-          </button>
-          <h1 style={{ fontSize: 17, fontWeight: 700, color: "#ffffff", margin: 0, flex: 1 }}>
-            Alerts
-          </h1>
-        </div>
+        <AppHeader title="Alerts" onBack={() => setOpenRef.current(false)} />
 
         {/* ── Scrollable Alerts content ── */}
         <div

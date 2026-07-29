@@ -49,6 +49,7 @@ import {
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 import { COMPOSITOR_EASE, COMPOSITOR_EASE_CLOSE } from "@/animations/motion";
+import { AppHeader } from "@/components/AppHeader";
 
 // Spring easing for sheet snap transitions — matches BottomSheet in MobileChartLayout
 const SMS_SNAP_SPRING = `transform 0.22s ${COMPOSITOR_EASE}`;
@@ -1241,34 +1242,8 @@ export const SharedMarketSelector = memo(function SharedMarketSelector({
           </div>
         )}
 
-        {/* Back button row — only when backAction is present (overlay/push mode).
-            No safe-area padding needed: the Expo native layer already inserts
-            a spacer view equal to insets.top above the WebView, so the
-            viewport starts below the status bar on device. */}
-        {backAction && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "0 8px 0 4px",
-            height: 44,
-            flexShrink: 0,
-          }}>
-            <button
-              onClick={backAction}
-              style={{
-                width: 36, height: 36, borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "transparent", border: "none", cursor: "pointer",
-                color: "rgba(255,255,255,0.6)",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 12H5M12 5l-7 7 7 7"/>
-              </svg>
-            </button>
-            <span style={{ fontSize: 17, fontWeight: 700, color: "#ffffff" }}>Markets</span>
-          </div>
-        )}
+        {/* Back button row — only when backAction is present (overlay/push mode). */}
+        {backAction && <AppHeader title="Markets" onBack={backAction} />}
 
         {/* Tab row + action buttons */}
         <div style={{

@@ -13,7 +13,8 @@
 import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
-import { ArrowLeft, GitBranch, Layers, Target } from "lucide-react";
+import { GitBranch, Layers, Target } from "lucide-react";
+import { AppHeader } from "@/components/AppHeader";
 import { useSymbolTick } from "@/store/tickStore";
 import { useAlertStore } from "@/store/alertStore";
 import {
@@ -361,46 +362,8 @@ export const SelectAlertTypeOverlay = memo(function SelectAlertTypeOverlay({
           pointerEvents: open ? "auto" : "none",
         }}
       >
-        {/* ── Header ──
-             No env(safe-area-inset-top) here.
-             The Expo WebView already has a native <View height={insets.top}/> spacer
-             above the WebView frame, so the WebView content starts below the notch.
-             Adding safe-area padding again would double the gap.
-             In a desktop browser env(safe-area-inset-top) is 0, so this is safe. ── */}
-        <div
-          style={{
-            display: "flex", alignItems: "center", gap: 12,
-            padding: "0 16px",
-            height: 60,
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
-            background: "#08090c",
-            flexShrink: 0,
-          }}
-        >
-          {/* 44×44 circular back button */}
-          <button
-            onClick={onClose}
-            style={{
-              width: 44, height: 44, borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.10)",
-              cursor: "pointer",
-              color: "rgba(255,255,255,0.80)",
-              flexShrink: 0,
-              WebkitTapHighlightColor: "transparent",
-            } as React.CSSProperties}
-            onPointerDown={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.13)"; }}
-            onPointerUp={e   => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"; }}
-            onPointerLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"; }}
-          >
-            <ArrowLeft style={{ width: 18, height: 18 }} />
-          </button>
-
-          <h1 style={{ fontSize: 17, fontWeight: 700, color: "#fff", margin: 0, flex: 1, letterSpacing: "-.01em" }}>
-            Select Alert Type
-          </h1>
-        </div>
+        {/* ── Header ── */}
+        <AppHeader title="Select Alert Type" onBack={onClose} />
 
         {/* ── Scrollable content ── */}
         <div style={{
