@@ -20,7 +20,8 @@ import {
 } from "@/components/animations";
 
 // Lazy-loaded so it doesn't pull Alerts into the Dashboard chunk
-const AlertsPage = lazy(() => import("@/pages/alerts"));
+const AlertsPage  = lazy(() => import("@/pages/alerts"));
+const MarketsPage = lazy(() => import("@/pages/markets"));
 
 // ── Dashboard Alerts Overlay ──────────────────────────────────────────────────
 // Full-screen portal rendered on top of Dashboard (and bottom nav) without
@@ -140,6 +141,116 @@ const DashboardAlertsOverlay = memo(function DashboardAlertsOverlay() {
               <AlertsPage />
             </Suspense>
           </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+});
+
+// ── Dashboard Markets Overlay ─────────────────────────────────────────────────
+// Full-screen portal rendered on top of Dashboard (and bottom nav) without
+// navigating away from "/". Bottom nav stays on Dashboard tab.
+const DashboardMarketsOverlay = memo(function DashboardMarketsOverlay() {
+  const open    = useChartStore(s => s.dashboardMarketsOpen);
+  const setOpen = useChartStore(s => s.setDashboardMarketsOpen);
+
+  // Prevent rendering until first open (avoids blank portal on mount)
+  const hasOpenedRef = useRef(false);
+  if (open) hasOpenedRef.current = true;
+
+  // Entrance / exit CSS transition — same double-rAF pattern as DashboardAlertsOverlay
+  const [visible, setVisible] = useState(false);
+  const setOpenRef = useRef(setOpen);
+  useEffect(() => { setOpenRef.current = setOpen; }, [setOpen]);
+
+  useEffect(() => {
+    if (open) {
+      let rafId: number;
+      const t = setTimeout(() => { rafId = requestAnimationFrame(() => setVisible(true)); }, 0);
+      return () => { clearTimeout(t); cancelAnimationFrame(rafId); };
+    }
+    setVisible(false);
+    return undefined;
+  }, [open]);
+
+  // Body scroll-lock while open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  // ESC key closes the overlay
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") setOpenRef.current(false); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [open]);
+
+  if (!hasOpenedRef.current) return null;
+
+  return createPortal(
+    <div
+      aria-hidden={!open}
+      style={{ position: "fixed", inset: 0, zIndex: 90, pointerEvents: open ? "auto" : "none" }}
+    >
+      {/* Full-screen panel — slides up from bottom */}
+      <div
+        className="transform-gpu"
+        style={{
+          position: "absolute", inset: 0,
+          display: "flex", flexDirection: "column",
+          background: "#000000",
+          transform: visible ? "translateY(0)" : "translateY(100%)",
+          transition: `transform ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? EASE_OPEN : EASE_CLOSE}`,
+          willChange: "transform",
+          overflow: "hidden",
+        }}
+      >
+        {/* ── Header ── */}
+        <div
+          style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "0 16px",
+            paddingTop: "env(safe-area-inset-top)",
+            height: "calc(56px + env(safe-area-inset-top))",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            background: "#000000",
+            flexShrink: 0,
+          }}
+        >
+          <button
+            onClick={() => setOpenRef.current(false)}
+            style={{
+              width: 32, height: 32, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "transparent", border: "none", cursor: "pointer",
+              color: "rgba(255,255,255,0.6)",
+              flexShrink: 0,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft style={{ width: 20, height: 20 }} />
+          </button>
+          <h1 style={{ fontSize: 17, fontWeight: 700, color: "#ffffff", margin: 0, flex: 1 }}>
+            Markets
+          </h1>
+        </div>
+
+        {/* ── Markets content — fills remaining height ── */}
+        <div
+          style={{
+            flex: 1,
+            overflow: "hidden",
+            position: "relative",
+          }}
+        >
+          <Suspense fallback={null}>
+            <MarketsPage />
+          </Suspense>
         </div>
       </div>
     </div>,
@@ -709,7 +820,7 @@ const Dashboard = memo(function Dashboard() {
   const [timedOut,          setTimedOut]          = useState(false);
   const ticks         = useTickStore(s => s.ticks);
   const fc            = useCurrencyFormatter();
-  const setDashboardAlertsOpen = useChartStore(s => s.setDashboardAlertsOpen);
+  const setDashboardMarketsOpen = useChartStore(s => s.setDashboardMarketsOpen);
 
   useEffect(() => {
     console.log("[Dashboard] mount");
@@ -821,7 +932,7 @@ const Dashboard = memo(function Dashboard() {
       <motion.button
         whileTap={{ scale: 0.95 }}
         transition={TAP_TRANSITION}
-        onClick={() => setDashboardAlertsOpen(true)}
+        onClick={() => setDashboardMarketsOpen(true)}
         className="flex flex-col items-center gap-2"
       >
         <div
@@ -856,6 +967,9 @@ const Dashboard = memo(function Dashboard() {
 
       {/* ── Alerts Overlay ── full-screen portal, dashboard tab stays active ── */}
       <DashboardAlertsOverlay />
+
+      {/* ── Markets Overlay ── full-screen portal, dashboard tab stays active ── */}
+      <DashboardMarketsOverlay />
 
     </PageTransition>
   );

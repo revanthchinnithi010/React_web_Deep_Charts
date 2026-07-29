@@ -52,6 +52,8 @@ interface ChartStoreState {
   setDashboardSheetOpen:    (v: boolean) => void;
   dashboardAlertsOpen:      boolean;
   setDashboardAlertsOpen:   (v: boolean) => void;
+  dashboardMarketsOpen:     boolean;
+  setDashboardMarketsOpen:  (v: boolean) => void;
 }
 
 const loadIndicators = (): IndicatorState => {
@@ -83,6 +85,7 @@ export const useChartStore = create<ChartStoreState>((set, get) => ({
   mobileChartFullscreen: false,
   dashboardSheetOpen:    false,
   dashboardAlertsOpen:   false,
+  dashboardMarketsOpen:  false,
 
   setSymbol:    (symbol)    => { localStorage.setItem("tv_symbol",   symbol);   set({ symbol,   barsLoaded: false }); },
   setInterval:  (interval)  => { localStorage.setItem("tv_interval", interval); set({ interval, barsLoaded: false }); },
@@ -99,4 +102,5 @@ export const useChartStore = create<ChartStoreState>((set, get) => ({
   setMobileChartFullscreen: (mobileChartFullscreen) => set({ mobileChartFullscreen }),
   setDashboardSheetOpen:    (dashboardSheetOpen)    => set({ dashboardSheetOpen }),
   setDashboardAlertsOpen:   (dashboardAlertsOpen)   => set({ dashboardAlertsOpen }),
+  setDashboardMarketsOpen:  (dashboardMarketsOpen)  => set({ dashboardMarketsOpen }),
 }));
