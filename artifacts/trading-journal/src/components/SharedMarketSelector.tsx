@@ -1242,14 +1242,14 @@ export const SharedMarketSelector = memo(function SharedMarketSelector({
         )}
 
         {/* Back button row — only when backAction is present (overlay/push mode).
-            paddingTop absorbs the device safe-area (status bar) so the arrow
-            and title sit below the notch, not behind it. */}
+            No safe-area padding needed: the Expo native layer already inserts
+            a spacer view equal to insets.top above the WebView, so the
+            viewport starts below the status bar on device. */}
         {backAction && (
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "0 8px 0 4px",
-            paddingTop: "env(safe-area-inset-top, 0px)",
-            height: "calc(44px + env(safe-area-inset-top, 0px))",
+            height: 44,
             flexShrink: 0,
           }}>
             <button
