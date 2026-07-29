@@ -42,7 +42,6 @@ const CalcRisk    = lazy(() => import("@/pages/calc-risk"));
 const Charts         = lazy(() => import("@/pages/charts"));
 const NetPnl           = lazy(() => import("@/pages/NetPnLAnalytics"));
 const Trade            = lazy(() => import("@/pages/trade"));
-const DashboardAlerts  = lazy(() => import("@/pages/dashboard-alerts"));
 const NotFound       = lazy(() => import("@/pages/not-found"));
 const CtraderTest    = lazy(() => import("@/pages/ctrader-test"));
 // Kept lazy — imports Recharts; start immediately so it's ready before navigation.
@@ -385,11 +384,10 @@ const ALERTS_NODE = (
 
 /** Pages that hide the Layout header entirely. */
 const APP_NO_HEADER_PATHS = new Set([
-  "/charts",             // gesture surface owns the full viewport
-  "/position-detail",    // clip-path shared-element covers the full screen
-  "/pnl",                // keep-alive full-viewport UI
-  "/trades",             // has its own secondary header
-  "/dashboard-alerts",   // full-screen cover page with its own header
+  "/charts",          // gesture surface owns the full viewport
+  "/position-detail", // clip-path shared-element covers the full screen
+  "/pnl",             // keep-alive full-viewport UI
+  "/trades",          // has its own secondary header
 ]);
 
 /**
@@ -410,7 +408,7 @@ const APP_KEEP_ALIVE_PATHS = new Set(["/", "/charts", "/reports", "/pnl", "/mark
  * Waiting for onExitComplete is wrong here — it lets the header stay visible
  * while the overlay fades out, exposing it behind the entering destination page.
  */
-const APP_COVER_DETAIL_PATHS = new Set(["/portfolio", "/balances", "/net-pnl", "/dashboard-alerts"]);
+const APP_COVER_DETAIL_PATHS = new Set(["/portfolio", "/balances", "/net-pnl"]);
 
 // Known pathnames — used to decide whether to render NotFound.
 const KNOWN_PATHS = new Set([
@@ -418,7 +416,7 @@ const KNOWN_PATHS = new Set([
   "/calendar", "/notebook", "/settings",
   "/calc/crypto", "/calc/forex", "/calc/position", "/calc/margin", "/calc/risk",
   "/portfolio", "/balances", "/pnl", "/net-pnl", "/trade", "/ctrader-test", "/charts",
-  "/position-detail", "/dashboard-alerts",
+  "/position-detail",
 ]);
 
 /**
@@ -558,7 +556,6 @@ function Router() {
       () => import("@/pages/NetPnLAnalytics"),
       () => import("@/pages/trade"),
       () => import("@/pages/ctrader-test"),
-      () => import("@/pages/dashboard-alerts"),
     ];
     const timers: ReturnType<typeof setTimeout>[] = [];
     const id = setTimeout(() => {
@@ -748,7 +745,6 @@ function Router() {
         {pathname === "/portfolio"        && <PageTransition key="/portfolio"        variant="cover-detail" custom={dir} style={{ position: "fixed", inset: 0, zIndex: 50, background: "#000" }}><Portfolio /></PageTransition>}
         {pathname === "/balances"         && <PageTransition key="/balances"         variant="cover-detail" custom={dir} style={{ position: "fixed", inset: 0, zIndex: 50, background: "#000" }}><Balances  /></PageTransition>}
         {pathname === "/net-pnl"          && <Suspense fallback={<PageLoader />}><PageTransition key="/net-pnl" variant="cover-detail" custom={dir} style={{ position: "fixed", inset: 0, zIndex: 50, background: "#000" }}><NetPnl /></PageTransition></Suspense>}
-        {pathname === "/dashboard-alerts" && <Suspense fallback={null}><DashboardAlerts /></Suspense>}
       </AnimatePresence>
 
       {/* ── Cover-scale pages — CSS compositor animation, outside AnimatePresence ── */}

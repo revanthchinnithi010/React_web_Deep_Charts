@@ -1,4 +1,4 @@
-import { memo, useMemo, useEffect, useRef, useState, useCallback } from "react";
+import { memo, useMemo, useEffect, useRef, useState, useCallback, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import {
   useListTrades,
@@ -10,7 +10,7 @@ import AccountValueWidget from "@/components/AccountValueWidget";
 import DashboardSegmentedControl from "@/components/DashboardSegmentedControl";
 import { useCombinedPortfolio } from "@/store/combinedPortfolioStore";
 import { useBrokerStore } from "@/store/brokerStore";
-import { Link, useLocation } from "wouter";
+import { Link as _Link } from "wouter"; // kept for potential future use
 import { BROKER_MAP, BROKER_INFO, TV_LINKS } from "@/data/sampleData";
 import { motion, AnimatePresence } from "motion/react";
 import { useTickStore } from "@/store/tickStore";
@@ -18,6 +18,134 @@ import { useChartStore } from "@/store/chartStore";
 import {
   PageTransition,
 } from "@/components/animations";
+
+// Lazy-loaded so it doesn't pull Alerts into the Dashboard chunk
+const AlertsPage = lazy(() => import("@/pages/alerts"));
+
+// ── Dashboard Alerts Overlay ──────────────────────────────────────────────────
+// Full-screen portal rendered on top of Dashboard (and bottom nav) without
+// navigating away from "/". Bottom nav stays on Dashboard, state is shared
+// via the global useAlertStore Zustand store.
+const DashboardAlertsOverlay = memo(function DashboardAlertsOverlay() {
+  const open    = useChartStore(s => s.dashboardAlertsOpen);
+  const setOpen = useChartStore(s => s.setDashboardAlertsOpen);
+
+  // Prevent rendering until first open (avoids blank portal on mount)
+  const hasOpenedRef = useRef(false);
+  if (open) hasOpenedRef.current = true;
+
+  // Entrance / exit CSS transition — same double-rAF pattern as DayDetailSheet
+  const [visible, setVisible] = useState(false);
+  const setOpenRef = useRef(setOpen);
+  useEffect(() => { setOpenRef.current = setOpen; }, [setOpen]);
+
+  useEffect(() => {
+    if (open) {
+      let rafId: number;
+      const t = setTimeout(() => { rafId = requestAnimationFrame(() => setVisible(true)); }, 0);
+      return () => { clearTimeout(t); cancelAnimationFrame(rafId); };
+    }
+    setVisible(false);
+    return undefined;
+  }, [open]);
+
+  // Body scroll-lock while open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  // ESC key closes the overlay
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") setOpenRef.current(false); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [open]);
+
+  if (!hasOpenedRef.current) return null;
+
+  return createPortal(
+    <div
+      aria-hidden={!open}
+      style={{ position: "fixed", inset: 0, zIndex: 90, pointerEvents: open ? "auto" : "none" }}
+    >
+      {/* Backdrop */}
+      <div
+        onClick={() => setOpenRef.current(false)}
+        style={{
+          position: "absolute", inset: 0,
+          background: "rgba(0,0,0,0.45)",
+          opacity: visible ? 1 : 0,
+          transition: `opacity ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? EASE_OPEN : EASE_CLOSE}`,
+        }}
+      />
+
+      {/* Full-screen panel — slides up from bottom */}
+      <div
+        className="transform-gpu"
+        style={{
+          position: "absolute", inset: 0,
+          display: "flex", flexDirection: "column",
+          background: "#000000",
+          transform: visible ? "translateY(0)" : "translateY(100%)",
+          transition: `transform ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? EASE_OPEN : EASE_CLOSE}`,
+          willChange: "transform",
+          overflow: "hidden",
+        }}
+      >
+        {/* ── Header ── */}
+        <div
+          style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "0 16px",
+            paddingTop: "env(safe-area-inset-top)",
+            height: "calc(56px + env(safe-area-inset-top))",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            background: "#000000",
+            flexShrink: 0,
+          }}
+        >
+          <button
+            onClick={() => setOpenRef.current(false)}
+            style={{
+              width: 32, height: 32, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "transparent", border: "none", cursor: "pointer",
+              color: "rgba(255,255,255,0.6)",
+              flexShrink: 0,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft style={{ width: 20, height: 20 }} />
+          </button>
+          <h1 style={{ fontSize: 17, fontWeight: 700, color: "#ffffff", margin: 0, flex: 1 }}>
+            Alerts
+          </h1>
+        </div>
+
+        {/* ── Scrollable Alerts content ── */}
+        <div
+          style={{
+            flex: 1, overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            paddingBottom: "env(safe-area-inset-bottom)",
+          }}
+        >
+          <div className="px-5 pt-3 pb-20 md:px-6 md:pt-4 mx-auto max-w-[1400px]">
+            <Suspense fallback={null}>
+              <AlertsPage />
+            </Suspense>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+});
 
 const DASHBOARD_TIMEOUT_MS = 2_000;
 
@@ -581,7 +709,7 @@ const Dashboard = memo(function Dashboard() {
   const [timedOut,          setTimedOut]          = useState(false);
   const ticks         = useTickStore(s => s.ticks);
   const fc            = useCurrencyFormatter();
-  const [, navigate]  = useLocation();
+  const setDashboardAlertsOpen = useChartStore(s => s.setDashboardAlertsOpen);
 
   useEffect(() => {
     console.log("[Dashboard] mount");
@@ -693,7 +821,7 @@ const Dashboard = memo(function Dashboard() {
       <motion.button
         whileTap={{ scale: 0.95 }}
         transition={TAP_TRANSITION}
-        onClick={() => navigate("/dashboard-alerts")}
+        onClick={() => setDashboardAlertsOpen(true)}
         className="flex flex-col items-center gap-2"
       >
         <div
@@ -725,6 +853,9 @@ const Dashboard = memo(function Dashboard() {
         open={sheetOpen}
         onClose={() => openSheet(false)}
       />
+
+      {/* ── Alerts Overlay ── full-screen portal, dashboard tab stays active ── */}
+      <DashboardAlertsOverlay />
 
     </PageTransition>
   );
