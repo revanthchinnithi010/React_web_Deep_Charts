@@ -131,7 +131,11 @@ const DashboardAlertsOverlay = memo(function DashboardAlertsOverlay() {
 // When a coin in the Watchlist is tapped, instead of navigating to /charts we
 // show the SelectAlertTypeOverlay (push from right) so the user can pick an
 // alert type for that symbol.
-const DashboardMarketsOverlay = memo(function DashboardMarketsOverlay() {
+const DashboardMarketsOverlay = memo(function DashboardMarketsOverlay({
+  onWatchlistTap,
+}: {
+  onWatchlistTap: (symbol: string) => void;
+}) {
   const open    = useChartStore(s => s.dashboardMarketsOpen);
   const setOpen = useChartStore(s => s.setDashboardMarketsOpen);
 
@@ -170,17 +174,6 @@ const DashboardMarketsOverlay = memo(function DashboardMarketsOverlay() {
     return () => window.removeEventListener("keydown", h);
   }, [open]);
 
-  // Symbol selected from the Watchlist — drives the SelectAlertTypeOverlay
-  const [alertSymbol, setAlertSymbol] = useState<string | null>(null);
-
-  const handleWatchlistTap = useCallback((symbol: string) => {
-    setAlertSymbol(symbol);
-  }, []);
-
-  const handleAlertTypeClose = useCallback(() => {
-    setAlertSymbol(null);
-  }, []);
-
   if (!hasOpenedRef.current) return null;
 
   return createPortal(
@@ -206,18 +199,11 @@ const DashboardMarketsOverlay = memo(function DashboardMarketsOverlay() {
           <Suspense fallback={null}>
             <MarketsPage
               onBack={() => setOpenRef.current(false)}
-              onWatchlistTap={handleWatchlistTap}
+              onWatchlistTap={onWatchlistTap}
             />
           </Suspense>
         </div>
       </div>
-
-      {/* ── Select Alert Type — pushes in from the right over the Markets panel ── */}
-      <SelectAlertTypeOverlay
-        open={!!alertSymbol}
-        symbol={alertSymbol ?? ""}
-        onClose={handleAlertTypeClose}
-      />
     </div>,
     document.body,
   );
@@ -824,6 +810,14 @@ const Dashboard = memo(function Dashboard() {
 
   const { data: calData } = useGetCalendarHeatmap({ year: calYear, month: calMonth });
 
+  // ── Select Alert Type state — lifted here so SelectAlertTypeOverlay is a
+  //    top-level portal sibling (same level as DashboardAlertsOverlay), NOT
+  //    nested inside DashboardMarketsOverlay's portal tree. This prevents any
+  //    containing-block leakage from DashboardMarketsOverlay's inner panel.
+  const [alertSymbol, setAlertSymbol] = useState<string | null>(null);
+  const handleWatchlistTap  = useCallback((symbol: string) => setAlertSymbol(symbol), []);
+  const handleAlertTypeClose = useCallback(() => setAlertSymbol(null), []);
+
   const setDashboardSheetOpen = useChartStore(s => s.setDashboardSheetOpen);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [sheetOpen,    setSheetOpen]    = useState(false);
@@ -934,7 +928,19 @@ const Dashboard = memo(function Dashboard() {
       <DashboardAlertsOverlay />
 
       {/* ── Markets Overlay ── full-screen portal, dashboard tab stays active ── */}
-      <DashboardMarketsOverlay />
+      <DashboardMarketsOverlay onWatchlistTap={handleWatchlistTap} />
+
+      {/* ── Select Alert Type — top-level portal sibling, NOT nested inside
+           DashboardMarketsOverlay. Keeping it here (same React fiber level as
+           DashboardAlertsOverlay) means its createPortal call is processed
+           independently from the Markets overlay's portal context, which
+           eliminates any containing-block or stacking-context leakage from
+           DashboardMarketsOverlay's inner panel (will-change:transform). ── */}
+      <SelectAlertTypeOverlay
+        open={!!alertSymbol}
+        symbol={alertSymbol ?? ""}
+        onClose={handleAlertTypeClose}
+      />
 
     </PageTransition>
   );

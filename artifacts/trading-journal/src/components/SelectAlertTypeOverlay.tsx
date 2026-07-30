@@ -348,20 +348,32 @@ export const SelectAlertTypeOverlay = memo(function SelectAlertTypeOverlay({
 
   return createPortal(
     <>
+      {/* ── Outer shell: positioning only — no transform, no background.
+           Matches the two-div pattern used by DashboardAlertsOverlay and
+           DashboardMarketsOverlay: keeping transform off the position:fixed
+           element prevents WebKit / Android WebView from evaluating
+           env(safe-area-inset-top) from a different reference point, which
+           was the root cause of the extra vertical space compared to Markets. ── */}
       <div
         aria-hidden={!open}
-        className="transform-gpu"
         style={{
           position: "fixed", inset: 0, zIndex: 95,
-          display: "flex", flexDirection: "column",
-          background: "#08090c",
-          transform: visible ? "translateX(0)" : "translateX(100%)",
-          transition: `transform ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? COMPOSITOR_EASE : COMPOSITOR_EASE_CLOSE}`,
-          willChange: "transform",
-          overflow: "hidden",
           pointerEvents: open ? "auto" : "none",
         }}
       >
+        {/* ── Inner panel: animation + layout + background ── */}
+        <div
+          className="transform-gpu"
+          style={{
+            position: "absolute", inset: 0,
+            display: "flex", flexDirection: "column",
+            background: "#000000",
+            transform: visible ? "translateX(0)" : "translateX(100%)",
+            transition: `transform ${visible ? DUR_OPEN : DUR_CLOSE}ms ${visible ? COMPOSITOR_EASE : COMPOSITOR_EASE_CLOSE}`,
+            willChange: "transform",
+            overflow: "hidden",
+          }}
+        >
         {/* ── Header ── */}
         <AppHeader title="Select Alert Type" onBack={onClose} />
 
@@ -423,7 +435,8 @@ export const SelectAlertTypeOverlay = memo(function SelectAlertTypeOverlay({
             />
           </div>
         </div>
-      </div>
+        </div> {/* inner panel */}
+      </div> {/* outer shell */}
 
       {/* Creation modals */}
       {activeModal === "trendline" && (
